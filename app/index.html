@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hey!</title>
+    <script src="core.build.js"></script>
+    <script src="examples/add.js"></script>
+    <script src="examples/sub.js"></script>
+    <script src="examples/clone.js"></script>
+    <script src="examples/composition1.js"></script>
+    <script src="examples/composition2.js"></script>
+</head>
+<body>
+    <span id="browser-sync-binding"></span>
+
+    hallo!a
+    <button onclick="clickbutton()">clickme</button>
+    <script>
+        function clickbutton(event) {
+            var now = Date.now();
+
+            composition1.execute([
+                [10, 50],
+                [15, 5],
+                [20, 10]
+            ],
+            [
+                [0, false],
+                [0, false],
+                [0, false],
+                [0, false],
+                [0, false],
+                []
+            ]).then(function (output) {
+
+                console.log('time ' + (Date.now() - now) + 'ms');
+                console.log(output);
+            });
+        }
+    </script>
+</body>
+</html>
