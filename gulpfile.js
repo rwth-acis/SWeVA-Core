@@ -22,8 +22,54 @@ var merge = require('merge-stream');
 var path = require('path');
 var fs = require('fs');
 var historyApiFallback = require('connect-history-api-fallback');
+var ext_replace = require('gulp-ext-replace');
 
 
+var through = require('through2');
+var gutil = require('gulp-util');
+var PluginError = gutil.PluginError;
+
+function prefixStream(prefixText) {
+    var stream = through();
+    stream.write(prefixText);
+    return stream;
+}
+
+
+var composableToJSON = function () {
+    return through.obj(function (file, enc, cb) {
+        if (file.isNull()) {
+            // return empty file
+            return cb(null, file);
+        }
+        if (file.isBuffer()) {
+            var fileContents = new String(file.contents) + '';
+            //we now have the relevent object
+            var resultObj = new Function('return' + fileContents)();
+           
+            for (var key in resultObj) {
+                if (resultObj.hasOwnProperty(key)) {
+                    if (typeof resultObj[key] === 'function') {
+                        var funcStringArray = resultObj[key].toString().match(/[^\r\n]+/g);
+                        resultObj[key] = funcStringArray;
+                    }                    
+                }
+            }
+            
+
+            //pretty print
+            var result = JSON.stringify(resultObj, null, 4);
+            file.contents = new Buffer(result.toString());
+        }
+        if (file.isStream()) {
+            throw new PluginError('composableToJSON', 'Only Buffer format is supported');
+           
+        }
+
+        cb(null, file);
+
+    });
+}
 
 
 
@@ -59,7 +105,13 @@ gulp.task('browserify', function () {
 
     
 });
+gulp.task('composablesToJSON', function () {
+    return gulp.src(['app/examples/*.js'])
+    .pipe(ext_replace('.json'))
+    .pipe(composableToJSON())
+    .pipe(gulp.dest('app/examplesJSON'));
 
+});
 
 
 // Copy all files at the root level (app)
@@ -113,7 +165,8 @@ gulp.task('serve', [], function () {
         }
     });
 
-    gulp.watch(['app/**/*.html'], reload);  
+    gulp.watch(['app/**/*.html'], reload);
+    gulp.watch(['app/examples/*.js'], ['composablesToJSON']);
     gulp.watch(['app/**/*.js'], ['browserify']);
 });
 

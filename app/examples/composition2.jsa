@@ -1,8 +1,6 @@
-﻿'use strict';
-
-var composition2 = new sweva.Composition(
-
-    {
+﻿(function () {
+    return {
+        type: 'composition',
         name: 'composition2',
         modules: {
             'composition1': composition1,
@@ -18,18 +16,15 @@ var composition2 = new sweva.Composition(
             'sub5': [
                 {
                     to: 'add5',
-                    parameter:1
+                    parameter: 1
                 }
             ]
-
-
         },
         dataBlocksIn: 2,
         dataBlocksOut: 1,
         inputBlocks: 0
     }
-
-    );
+})();/*
 var now = Date.now();
 
 composition2.execute([
@@ -54,4 +49,4 @@ composition2.execute([
 ]).then(function (output) {
     console.log('time ' + (Date.now() - now) + 'ms');
     console.log(output);
-});
+});*/

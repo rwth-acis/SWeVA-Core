@@ -1,58 +1,70 @@
 ﻿'use strict';
 
 var Composable = require('./composable.js');
+var DefinitionError = require('../errors/definitionError.js');
+var ExecutionError = require('../errors/executionError.js');
 
-function Module(initializationObject){//name, createRequest, transformResponse) {
-    
-    if (initializationObject.hasOwnProperty('request')) {
-        this.createRequestFunction = initializationObject.request;
-    } else {
-        this.createRequestFunction = function (dataArray, inputArray) {
+function Module(initializationObject) {
+
+    this.initialize(initializationObject);
+
+    this.initializeFunction(initializationObject, 'request', 2,
+        function (data, input) {
             return new Promise(function (resolve, reject) {
                 resolve(0);
             });
-        };
-    }
-    if (initializationObject.hasOwnProperty('response')) {
-        this.transformResponseFunction = initializationObject.response;
-    } else {
-        this.transformResponseFunction = function (response) { return [response.data] };
-    }
+        });
+    this.initializeFunction(initializationObject, 'requestError', 2, null);
 
-    this.initialize(initializationObject);
+    this.initializeFunction(initializationObject, 'response', 2,
+        function (response, input) { return response.data });
+
+    this.initializeFunction(initializationObject, 'compute', 2, null);
+  
+   
+    
 }
 Module.prototype = Object.create(Composable.prototype);
+Module.prototype.constructor = Module;
 
-
-
-Module.prototype.createRequest = function (dataArray, inputArray) {
-    return this.createRequestFunction(dataArray, inputArray);
-}
-Module.prototype.callService = function (request, inputArray) {
+Module.prototype.callService = function (request, input) {
     var self = this;
     return new Promise(function (resolve, reject) {
-        
         request
         .then(function (response) {
-            resolve(self.transformResponse(response, inputArray));
+            resolve(self.response(response, input));
         })
         .catch(function (response) {
-            reject(response);
-        });        
+            //if we have a function to deal with errors from service directly...
+            if (self.requestError !== null) {
+                resolve(self.requestError(response, input));
+            }
+            else {
+                reject(response);
+            }
+            
+        });
     });
 }
-Module.prototype.transformResponse = function (response) {
-    return this.transformResponseFunction(response);
-}
-Module.prototype.execute = function (dataArray, inputArray) {
+
+Module.prototype.execute = function (data, input) {
     var self = this;
+
     return new Promise(function (resolve, reject) {
-        var request = self.createRequest(dataArray, inputArray);
-        self.callService(request, inputArray).then(function (output) {
-            resolve(output);
-        }).catch(function (err) {
-            console.error(err);
-        });
+    
+        if (self.compute !== null) {
+            resolve(self.compute(data, input));
+        }
+        else {
+            self.callService(self.request(data, input), input).then(function (output) {
+                resolve(output);
+            }).catch(function (err) {
+                sweva.ErrorManager.error(
+                   new ExecutionError('something happened unexpected happened' + err,
+                   'Module.' + this.name, err));
+                console.error(err);
+            });
+        }       
     });
 }
 module.exports = Module;

@@ -1,39 +1,64 @@
 ﻿'use strict';
 
+var DefinitionError = require('../errors/definitionError.js');
+
 function Composable() {
 }
 
 Composable.prototype.name = 'someModule';
-Composable.prototype.dataBlocksIn = 1;
-Composable.prototype.dataBlocksOut = 1;
-Composable.prototype.inputBlocks = 0;
+
 
 Composable.prototype.initialize = function (initializationObject) {
-    if (initializationObject.hasOwnProperty('name')) {
-        this.name = initializationObject.name;
-    } else {
-        this.name = 'someModule';
-    }
-    if (initializationObject.hasOwnProperty('dataBlocksIn')) {
-        this.dataBlocksIn = initializationObject.dataBlocksIn;
-    } else {
-        this.dataBlocksIn = 1;
-    }
+    this.initializeProperty(initializationObject, 'name', 'someModule');
 
-    if (initializationObject.hasOwnProperty('dataBlocksOut')) {
-        this.dataBlocksOut = initializationObject.dataBlocksOut;
-    } else {
-        this.dataBlocksOut = 1;
-    }
 
-    if (initializationObject.hasOwnProperty('inputBlocks')) {
-        this.inputBlocks = initializationObject.inputBlocks;
+    this.initializeProperty(initializationObject, 'dataInNames', ['data']);
+    this.initializeProperty(initializationObject, 'dataOutNames', ['result']);
+    this.initializeProperty(initializationObject, 'inputNames', []);
+
+    this.dataIn = this.dataInNames.length;
+    this.dataOut = this.dataOutNames.length;
+    this.inputIn = this.inputNames.length;
+
+}
+Composable.prototype.initializeProperty = function (initializationObject,
+    property, defaultValue) {
+    if (initializationObject.hasOwnProperty(property)) {
+        this[property] = initializationObject[property];
     } else {
-        this.inputBlocks = 0;
+        this[property] = defaultValue;
     }
+   
 }
 
-Composable.prototype.execute = function (dataArray, inputArray) {
+Composable.prototype.initializeFunction = function (initializationObject,
+    property, expectedArgumentsCount, defaultValue) {
+    if (initializationObject.hasOwnProperty(property)) {
+        if (typeof initializationObject[property] === 'function') {
+            if (initializationObject[property].length >= expectedArgumentsCount) {
+                this[property] = initializationObject[property];
+            }
+            else {
+                
+                sweva.ErrorManager.error(
+                    new DefinitionError('function "' + property + '" requires at least ' +
+                    expectedArgumentsCount + ' arguments, but provides only ' +
+                    initializationObject[property].length,
+                    this.constructor.name+'.'+this.name, initializationObject[property]));   
+            }
+        }
+        else {
+            
+            sweva.ErrorManager.error(
+                   new DefinitionError('"'+property + '" is reserved for functions, but not defined as one',
+                   this.constructor.name + '.' + this.name, initializationObject[property]));
+        }
+    }
+    else {
+        this[property] = defaultValue;
+    }
+}
+Composable.prototype.execute = function (data, input) {
     return new Promise(function (resolve, reject) {
         resolve(0);
     });

@@ -1,72 +1,64 @@
-﻿'use strict';
-
-var composition1 = new sweva.Composition(
-
-    {
+﻿(function () {
+    return {
+        type: 'composition',
         name: 'composition1',
         modules: {
-            'add1': addModule,
-            'add2': addModule,
-            'add3': addModule,
-            'sub1': subModule,
-            'sub2': subModule,
-            'clone1': cloneModule
+            'adder1': 'localAdd',
+            'adder2': 'add',
+            'adder3': 'add',
+            'subber1': 'sub',
+            'subber2': 'sub',
+            'clone1': 'clone',
+            'invert1': 'localInvert'
         },
         links: {
-            'add1': [
+            'adder1': [
                 {
-                    to: 'sub1'
+                    to: 'subber1',
+                    mapping: 'sub1'
                 }
             ],
             'clone1': [
                 {
-                    to: 'sub1',
-                    parameter: 1
+                    to: 'subber1',
+                    mapping: {
+                        'second': 'sub2'
+                    }
                 },
                 {
-                    to: 'sub2'
+                    to: 'subber2',
+                    mapping: {
+                        'first': 'sub1'
+                    }
                 }
             ],
-            'add2': [
+            'adder2': [
                 {
-                    to: 'sub2',
-                    parameter: 1
+                    to: 'subber2',
+                    mapping: 'sub2'
                 }
             ],
-            'sub1': [
+            'subber1': [
                 {
-                    to: 'add3'
+                    to: 'adder3',
+                    mapping: 'sum1'
                 }
             ],
-            'sub2': [
+            'subber2': [
                 {
-                    to: 'add3',
-                    parameter: 1
+                    to: 'adder3',
+                    mapping: 'sum2'
                 }
+            ],
+            'adder3': [
+               {
+                   to: 'invert1'
+               }
             ]
+        },
+        inputInNames: ['offset', 'invert'],
+        mapInput: function (input, moduleName, modules) {
+            return input;
         }
     }
-    
-    );
-
-
-
-/*s
-var now = Date.now();
-
-composition1.execute([
-    [10, 50],
-    [15, 5],
-    [20, 10]
-], [
-    [0, false],
-    [0, false],
-    [0, true],
-    [0, false],
-    [0, false],
-    []
-]).then(function (output) {
-    
-    console.log('time ' + (Date.now() - now) + 'ms');
-    console.log(output);
-});*/
+})();

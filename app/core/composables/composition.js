@@ -1,29 +1,39 @@
 ﻿'use strict';
 
 var Composable = require('./composable.js');
+var DefinitionError = require('../errors/definitionError.js');
+var ExecutionError = require('../errors/executionError.js');
 
 function Composition(initializationObject) {
+    
+    this.initializeProperty(initializationObject, 'modules', {});
+    this.initializeProperty(initializationObject, 'links', {});
 
-    if (initializationObject.hasOwnProperty('modules')) {
-        this.modules = initializationObject.modules;
-    } else {
-        this.modules = {};
-    }
-
-    if (initializationObject.hasOwnProperty('links')) {
-        this.links = initializationObject.links;
-    } else {
-        this.links = {};
-    }
+    this.initializeFunction(initializationObject, 'mapInput', 3, function (input, moduleName, modules) {
+        return input[moduleName];
+    });
 
     this.initialize(initializationObject);
+    this.loadModules();
     this.analyzeLinkGraph();
 }
 Composition.prototype = Object.create(Composable.prototype);
 
+Composition.prototype.loadModules = function () {
+    var promises = [];
+    for (var key in this.modules) {
+        if (this.modules.hasOwnProperty(key)) {
+            console.log(this.modules[key]);
+            promises.push(sweva.ComposableLoader.load(this.modules[key], this.modules, key));
+        }
+    }
+    Promise.all(promises).then(function () {
+        console.log('loaded all');
+    });
+}
 Composition.prototype.hasParameters = function (module) {
     //how many parameters do we need?
-    var parametersNeeded = this.modules[module].dataBlocksIn;
+    var parametersNeeded = this.modules[module].dataIn;
 
     //we do not need any
     if (parametersNeeded == 0) {
@@ -32,35 +42,29 @@ Composition.prototype.hasParameters = function (module) {
 
     //we need at least one
     if (this.parameters.hasOwnProperty(module)) {
+        //if we only need one, it's ok (we have some value defined, if the key is present)
+        if (parametersNeeded == 1) {
+            return true;
+        }
         //compare available parameter count with needed
-        return this.parameters[module].count == parametersNeeded;
+        return Object.keys(this.parameters[module]).length == parametersNeeded;
     }
     return false;
 }
 
-Composition.prototype.addParameter = function (module, position, value) {
+Composition.prototype.addParameter = function (module, property, value) {
     //if no key vor module present, create one
     if (!this.parameters.hasOwnProperty(module)) {
         this.parameters[module] = {
-            count: 0
         };
     }
-    //for paramaeters (datablocks) are expected in a certain order
-    if (!this.parameters[module].hasOwnProperty(position)) {
-        this.parameters[module].count += 1;
-    }
 
-    //check if position is in bounds
-    if (this.modules[module].dataBlocksIn <= position || position < 0) {
-        //throw some error
-    }
-
-    this.parameters[module][position] = value;
+    this.parameters[module][property] = value;
 }
 Composition.prototype.reset = function () {
     this.parameters = {};
     this.unlcearedModules = [];
-    this.outputArray = [];
+    this.output = {};
     for (var key in this.modules) {
         if (this.modules.hasOwnProperty(key)) {
             this.unlcearedModules.push({
@@ -108,18 +112,28 @@ Composition.prototype.analyzeLinkGraph = function () {
     }
 
     //implicit imformation
-    this.dataBlocksIn = this.startingModules.length;
-    this.dataBlocksOut = Object.keys(this.endingModules).length;
-    this.inputBlocks = Object.keys(this.modules).length;
-    /*console.log(this.name);
-    console.log(this.dataBlocksIn);
-    console.log(this.dataBlocksOut);
-    console.log(this.inputBlocks);*/
+    this.dataIn = this.startingModules.length;
+    this.dataOut = Object.keys(this.endingModules).length;
 
-    /*console.log(this.startingModules);
-    console.log(this.endingModules);
-    console.log(this.inverseLinks);*/
+
+    this.dataInNames = [];
+    this.dataOutNames = [];
+
+    for (var i = 0; i < this.startingModules.length; i++) {
+        this.dataInNames.push(this.startingModules[i]);
+    }
+    for (var key in this.endingModules) {
+        if (this.endingModules.hasOwnProperty(key)) {
+            this.dataOutNames.push(key);
+        }
+    }
+    for (var key in this.endingModules) {
+        if (this.endingModules.hasOwnProperty(key)) {
+            this.dataOutNames.push(key);
+        }
+    }
 }
+    
 
 Composition.prototype.moduleQueueExecution = function () {
     for (var i = 0; i < this.unlcearedModules.length; i++) {
@@ -128,21 +142,20 @@ Composition.prototype.moduleQueueExecution = function () {
         }
 
         var moduleName = this.unlcearedModules[i].module;
-        var data = [];
-        var input = [];
-
+        var data = 0;
+        var input = 0;
+        
         //fill data and input for next module call
         if (this.hasParameters(moduleName)) {
-            for (var k = 0; k < this.parameters[moduleName].count; k++) {
-                data.push(this.parameters[moduleName][k]);
-            }
+            data = this.parameters[moduleName];
 
-            input = this.inputArray[i];
+            input = this.mapInput(this.input, moduleName, this.modules);
         }
         else {
             continue;
         }
-
+        console.log('executing: ' + moduleName);
+       
         //not continued = modulName can be executed
         var self = this;
         var func = function (moduleName, i) {
@@ -151,32 +164,76 @@ Composition.prototype.moduleQueueExecution = function () {
 
                 if (self.endingModules.hasOwnProperty(moduleName)) {
                     var allCleared = true;
-                    self.outputArray.push(output);
+                    //if we have only one output module, we do not need a named property
+                    if (Object.keys(self.endingModules).length > 1) {
+                        self.output[moduleName] = output;
+                    }
+                    else {
+                        self.output = output;
+                    }
+                    
+
+                    //check if this was the last module
                     for (var k = 0; k < self.unlcearedModules.length; k++) {
                         if (!self.unlcearedModules[k].cleared) {
                             allCleared = false;
                         }
                     }
-
                     //if this was the last endingModule, finish
                     if (allCleared) {
                         self.executeFinishedCallback();
                     }
                 }
                 else {
-                    for (var k = 0; k < output.length; k++) {
-                        self.addParameter(self.links[moduleName][k].to, self.links[moduleName][k].parameter || 0, output[k]);
+
+                    
+                    for (var k = 0; k < self.links[moduleName].length; k++) {
+
+                        var mapping = self.links[moduleName][k].mapping;
+
+
+                        if (typeof mapping === 'undefined') { //no mapping
+                            self.parameters[self.links[moduleName][k].to] = output;
+                        }
+                        else if (typeof mapping === 'string') { //map whole output (i.e. no sub-parts of output present)
+
+                            if (mapping.trim().length == 0) {//empty string = no mapping
+                                self.parameters[self.links[moduleName][k].to] = output;
+                            }
+                            else {
+                                self.addParameter(self.links[moduleName][k].to, mapping, output);
+                            }
+                            
+                        }
+                        else if (typeof mapping === 'object') { //output is an object, so map properties
+                            //for each mapping
+                            for (var key in mapping) {
+                                if (mapping.hasOwnProperty(key)) {
+                                    //map the value of the output to the corresponding key
+                                    if (mapping[key].trim().length == 0) {//empty mapping target
+                                        self.parameters[self.links[moduleName][k].to] = output[key];
+                                    }
+                                    else {
+                                        self.addParameter(self.links[moduleName][k].to, mapping[key], output[key]);
+                                    }
+                                    
+                                }
+                            }
+                        }
+                        else {
+                            //error, no idea what to do with output
+                        }
                     }
+                  
                 }
 
-                //console.log(self.parameters);
 
                 self.moduleQueueExecution.apply(self);
             }
         };
         if (!this.unlcearedModules[i].cleared) {
             this.unlcearedModules[i].cleared = true;
-           
+
             this.modules[moduleName].execute(data, input).then(func(moduleName, i));
         }
 
@@ -188,45 +245,36 @@ Composition.prototype.moduleQueueExecution = function () {
         console.log(st);*/
     }
 }
-Composition.prototype.execute = function (dataArray, inputArray) {
+Composition.prototype.execute = function (data, input) {
     var self = this;
-    this.dataArray = dataArray;
-    this.inputArray = inputArray;
+    this.data = data;
+    this.input = input;
 
     this.reset();
-   
+
     return new Promise(function (resolve, reject) {
-        if (self.dataArray.length < self.dataBlocksIn) {
-            //throw error
-            reject('Composition ' + '\"' + self.name + '\" has only ' + self.dataArray.length
-                + ' elements as data, but requires '+self.dataBlocksIn+'!');
-            return;
-        }
-
-        /*if (self.inputArray.length < self.inputBlocks) {
-            //throw error
-            reject('Composition ' + '\"' + self.name + '\" has only ' + self.inputArray.length
-                + ' elements as input, but requires ' + self.inputBlocks + '!');
-            return;
-        }*/
-
-
-        //each starting module has an own data block (array eslement)
+        //each starting module has an own data block (array element)
+        /*
         for (var i = 0; i < self.startingModules.length; i++) {
             var moduleNeedsDataBlocks = self.modules[self.startingModules[i]].dataBlocksIn;
             for (var k = 0; k < moduleNeedsDataBlocks; k++) {
                 self.addParameter(self.startingModules[i], k, self.dataArray[i][k]);
             }
+        }*/
+       
+        for (var key in self.data) {
+            if (self.data.hasOwnProperty(key)) {
+                self.parameters[key] = self.data[key]; //copy data directly
+            }
         }
-        
+       
         self.executeFinishedCallback = function (error) {
             if (error) {
                 reject(error);
             }
             else {
-               
-                resolve(self.outputArray);
-            }            
+                resolve(self.output);
+            }
         }
         self.moduleQueueExecution.apply(self);
     });

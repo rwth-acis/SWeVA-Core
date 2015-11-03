@@ -3,11 +3,8 @@
 <head>
     <title>Hey!</title>
     <script src="core.build.js"></script>
-    <script src="examples/add.js"></script>
-    <script src="examples/sub.js"></script>
-    <script src="examples/clone.js"></script>
-    <script src="examples/composition1.js"></script>
-    <script src="examples/composition2.js"></script>
+    <script src="execution.js"></script>
+   
 </head>
 <body>
     <span id="browser-sync-binding"></span>
@@ -17,23 +14,18 @@
     <script>
         function clickbutton(event) {
             var now = Date.now();
+            sweva.ComposableLoader.load('examples/add.json').then(function (composable) {
+                composable.execute({
+                    sum1: 15,
+                    sum2: 3
+                }, {
+                    offset: 0,
+                    invert: true
+                }).then(function (output) {
+                    console.log('time ' + (Date.now() - now) + 'ms');
+                    console.log(output);
+                })
 
-            composition1.execute([
-                [10, 50],
-                [15, 5],
-                [20, 10]
-            ],
-            [
-                [0, false],
-                [0, false],
-                [0, false],
-                [0, false],
-                [0, false],
-                []
-            ]).then(function (output) {
-
-                console.log('time ' + (Date.now() - now) + 'ms');
-                console.log(output);
             });
         }
     </script>

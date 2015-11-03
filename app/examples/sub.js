@@ -1,19 +1,20 @@
-﻿'use strict';
-
-var subModule = new sweva.Module(
-    {
+﻿(function () {
+    return {
+        type: 'module',
         name: 'sub',
-        request: function (dataArray, inputArray) {
+        request: function (data, input) {
             var request = sweva.axios.get('http://localhost:8080/example/calc/sub/'
-                + dataArray[0] + '/' + dataArray[1],
+                + data.sub1 + '/' + data.sub2,
                 {
                     params: {
-                        modifier1: inputArray[0],
-                        modifier2: inputArray[1]
+                        modifier1: input.offset,
+                        modifier2: input.invert
                     }
                 });
             return request;
         },
-        dataBlocksIn: 2,
-        inputBlocks: 2
-    });
+        dataInNames: ['sub1', 'sub1'],
+        dataOutNames: ['result'],
+        inputNames: ['offset', 'invert']
+    }
+})();
