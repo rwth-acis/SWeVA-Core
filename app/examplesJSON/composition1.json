@@ -55,7 +55,7 @@
             }
         ]
     },
-    "inputInNames": [
+    "inputNames": [
         "offset",
         "invert"
     ],

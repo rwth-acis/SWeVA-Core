@@ -9,10 +9,13 @@ globalObject.sweva.axios = require('../../bower_components/axios/dist/axios.min.
 var ComposableLoader = require('./execution/composableLoader.js');
 globalObject.sweva.ComposableLoader = new ComposableLoader('http://localhost:5001/examplesJSON/');
 
+globalObject.sweva.ExecutionManager = require('./execution/executionManager.js');
+
+
 var ErrorManager = require('./errors/errorManager.js');
 globalObject.sweva.ErrorManager = new ErrorManager();
 
-},{"../../bower_components/axios/dist/axios.min.js":10,"./errors/errorManager.js":6,"./execution/composableLoader.js":9}],2:[function(require,module,exports){
+},{"../../bower_components/axios/dist/axios.min.js":11,"./errors/errorManager.js":6,"./execution/composableLoader.js":9,"./execution/executionManager.js":10}],2:[function(require,module,exports){
 'use strict';
 
 var DefinitionError = require('../errors/definitionError.js');
@@ -87,30 +90,51 @@ var DefinitionError = require('../errors/definitionError.js');
 var ExecutionError = require('../errors/executionError.js');
 
 function Composition(initializationObject) {
-    
     this.initializeProperty(initializationObject, 'modules', {});
     this.initializeProperty(initializationObject, 'links', {});
 
     this.initializeFunction(initializationObject, 'mapInput', 3, function (input, moduleName, modules) {
-        return input[moduleName];
+        if (input.hasOwnProperty(moduleName)) {
+            return input[moduleName];
+        }
+    });
+
+    this.initializeFunction(initializationObject, 'mapDataIn', 3, function (data, moduleName, modules) {
+        if (data.hasOwnProperty(moduleName)) {
+            return data[moduleName];
+        }
+    });
+
+    this.initializeFunction(initializationObject, 'mapDataOut', 1, function (output) {
+        return output;
     });
 
     this.initialize(initializationObject);
-    this.loadModules();
+    this.isReady = false;
+    //this.loadModules();
     this.analyzeLinkGraph();
 }
 Composition.prototype = Object.create(Composable.prototype);
 
 Composition.prototype.loadModules = function () {
-    var promises = [];
-    for (var key in this.modules) {
-        if (this.modules.hasOwnProperty(key)) {
-            console.log(this.modules[key]);
-            promises.push(sweva.ComposableLoader.load(this.modules[key], this.modules, key));
+    var self = this;
+    return new Promise(function (resolve, reject) {
+        var promises = [];
+        for (var key in self.modules) {
+            if (self.modules.hasOwnProperty(key)) {
+                promises.push(sweva.ComposableLoader.load(self.modules[key], self.modules, key));
+            }
         }
-    }
-    Promise.all(promises).then(function () {
-        console.log('loaded all');
+
+        Promise.all(promises).then(function () {
+            self.isReady = true;
+            
+            if (self.wantsToExecute) {
+                self.wantsToExecute = false;
+                self.executeStarterCallback();
+            }
+            resolve();
+        });
     });
 }
 Composition.prototype.hasParameters = function (module) {
@@ -197,7 +221,6 @@ Composition.prototype.analyzeLinkGraph = function () {
     this.dataIn = this.startingModules.length;
     this.dataOut = Object.keys(this.endingModules).length;
 
-
     this.dataInNames = [];
     this.dataOutNames = [];
 
@@ -215,7 +238,6 @@ Composition.prototype.analyzeLinkGraph = function () {
         }
     }
 }
-    
 
 Composition.prototype.moduleQueueExecution = function () {
     for (var i = 0; i < this.unlcearedModules.length; i++) {
@@ -226,7 +248,7 @@ Composition.prototype.moduleQueueExecution = function () {
         var moduleName = this.unlcearedModules[i].module;
         var data = 0;
         var input = 0;
-        
+
         //fill data and input for next module call
         if (this.hasParameters(moduleName)) {
             data = this.parameters[moduleName];
@@ -236,8 +258,8 @@ Composition.prototype.moduleQueueExecution = function () {
         else {
             continue;
         }
-        console.log('executing: ' + moduleName);
-       
+        
+
         //not continued = modulName can be executed
         var self = this;
         var func = function (moduleName, i) {
@@ -253,7 +275,6 @@ Composition.prototype.moduleQueueExecution = function () {
                     else {
                         self.output = output;
                     }
-                    
 
                     //check if this was the last module
                     for (var k = 0; k < self.unlcearedModules.length; k++) {
@@ -267,25 +288,19 @@ Composition.prototype.moduleQueueExecution = function () {
                     }
                 }
                 else {
-
-                    
                     for (var k = 0; k < self.links[moduleName].length; k++) {
-
                         var mapping = self.links[moduleName][k].mapping;
-
 
                         if (typeof mapping === 'undefined') { //no mapping
                             self.parameters[self.links[moduleName][k].to] = output;
                         }
                         else if (typeof mapping === 'string') { //map whole output (i.e. no sub-parts of output present)
-
                             if (mapping.trim().length == 0) {//empty string = no mapping
                                 self.parameters[self.links[moduleName][k].to] = output;
                             }
                             else {
                                 self.addParameter(self.links[moduleName][k].to, mapping, output);
                             }
-                            
                         }
                         else if (typeof mapping === 'object') { //output is an object, so map properties
                             //for each mapping
@@ -298,7 +313,6 @@ Composition.prototype.moduleQueueExecution = function () {
                                     else {
                                         self.addParameter(self.links[moduleName][k].to, mapping[key], output[key]);
                                     }
-                                    
                                 }
                             }
                         }
@@ -306,9 +320,7 @@ Composition.prototype.moduleQueueExecution = function () {
                             //error, no idea what to do with output
                         }
                     }
-                  
                 }
-
 
                 self.moduleQueueExecution.apply(self);
             }
@@ -336,29 +348,34 @@ Composition.prototype.execute = function (data, input) {
 
     return new Promise(function (resolve, reject) {
         //each starting module has an own data block (array element)
-        /*
         for (var i = 0; i < self.startingModules.length; i++) {
-            var moduleNeedsDataBlocks = self.modules[self.startingModules[i]].dataBlocksIn;
-            for (var k = 0; k < moduleNeedsDataBlocks; k++) {
-                self.addParameter(self.startingModules[i], k, self.dataArray[i][k]);
-            }
-        }*/
-       
+            var moduleName=self.startingModules[i];
+            self.parameters[moduleName] = self.mapDataIn(self.data, moduleName, self.modules);
+        }
         for (var key in self.data) {
             if (self.data.hasOwnProperty(key)) {
                 self.parameters[key] = self.data[key]; //copy data directly
             }
         }
-       
+
         self.executeFinishedCallback = function (error) {
             if (error) {
                 reject(error);
             }
             else {
-                resolve(self.output);
+                resolve(self.mapDataOut(self.output));
             }
         }
-        self.moduleQueueExecution.apply(self);
+
+        if (self.isReady) {//all modules are loaded
+            self.moduleQueueExecution.apply(self);
+        }
+        else {
+            self.wantsToExecute = true;//we want to execute, but cannot: tell so the initialization/loading part
+            self.executeStarterCallback = function () { //execute via callback, as soon as loading finished
+                self.moduleQueueExecution.apply(self);
+            }
+        }
     });
 }
 
@@ -569,55 +586,93 @@ function ComposableLoader(basePath, suffix) {
     this.basePath = basePath || '';
     this.suffix = suffix || '.json';
     this.composables = {};
+    this.waitingList = {};
 }
 ComposableLoader.prototype.convertToObject = function (json) {
-    
     var result = json;
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
-            
             //reconstruct functions from string
             if (typeof json[key][0] == 'string') {
                 var str = new String(json[key][0]);
-                
+
                 if (str.trim().indexOf('function') == 0) {
                     json[key] = json[key].join('').parseFunction();
                 }
-                
             }
-
-
-           
         }
     }
 
     return result;
 }
+
+ComposableLoader.prototype.assignLoadedComposables = function (name, composable, assignToObject, property) {
+    this.composables[name] = composable;
+
+    if (typeof assignToObject !== 'undefined' && assignToObject !== null) {
+        assignToObject[property] = composable;
+        //deal with waitinglist: as the caller has to wait for 'then' we, can set the required values now with some delay
+
+        if (this.waitingList.hasOwnProperty(name)) {
+            for (var i = 0; i < this.waitingList[name].length; i++) {
+                var assignTo = this.waitingList[name][i].assignTo;
+                var prop = this.waitingList[name][i].prop;
+
+                assignTo[prop] = composable;
+            }
+            delete this.waitingList[name];
+        }
+    }
+}
 ComposableLoader.prototype.load = function (name, assignToObject, property) {
     var self = this;
+
     return new Promise(function (resolve, reject) {
         if (self.composables.hasOwnProperty(name)) {
-            assignToObject[property] = self.composables[name];
-            resolve(self.composables[name]);
+            if (self.composables[name] === true) {//we have only our placeholder, no real value yet
+                //put in waitinglist, which is checked after each load
+                if (typeof assignToObject !== 'undefined' && assignToObject !== null) {
+                    if (!self.waitingList.hasOwnProperty(name)) {
+                        self.waitingList[name] = [];
+                    }
+                    self.waitingList[name].push({
+                        assignTo: assignToObject,
+                        prop: property
+                    });
+                }
+
+                resolve(self.composables[name]);
+            }
+            else {
+                if (typeof assignToObject !== 'undefined' && assignToObject !== null) {
+                    assignToObject[property] = self.composables[name];
+                }
+                resolve(self.composables[name]);
+            }
         }
         else {
+            self.composables[name] = true; //set key and prevent unnecessary loads, while loading is already in progress
             var request = axios.get(self.basePath + name + self.suffix)
             .then(function (response) {
                 var composable = self.convertToObject(response.data);
                 console.log('loaded ' + composable.name);
+
                 if (composable.type == 'module') {
                     composable = new Module(composable);
-                   
+
+                    self.assignLoadedComposables(name, composable, assignToObject, property);
+
+                    resolve(composable);
                 }
                 else {
                     composable = new Composition(composable);
                     
+                    self.assignLoadedComposables(name, composable, assignToObject, property);
+                    
+                    composable.loadModules().then(function () {
+                        resolve(composable);
+                    });
                 }
-                self.composables[name] = composable;
-               
-                assignToObject[property] = composable;
-               
-                resolve(composable);
             })
             .catch(function (response) {
                 reject(self.basePath + name + self.suffix); //could not load
@@ -627,9 +682,101 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
 }
 ComposableLoader.prototype.clear = function () {
     this.composables = {};
+    this.waitingList = {};
 }
 module.exports = ComposableLoader;
-},{"../../../bower_components/axios/dist/axios.min.js":10,"../composables/composition.js":3,"../composables/module.js":4}],10:[function(require,module,exports){
+},{"../../../bower_components/axios/dist/axios.min.js":11,"../composables/composition.js":3,"../composables/module.js":4}],10:[function(require,module,exports){
+'use strict';
+
+function ExecutionManager() {
+}
+ExecutionManager.prototype.setup = function (executionArray) {
+    var needsLoading = [];
+    this.composables = {};
+    this.isReady = false;
+    this.wantsToExecute = false;
+    //if it is not an array, make it one
+    if (!Array.isArray(executionArray)) {
+        executionArray = [executionArray];
+    }
+
+    for (var i = 0; i < executionArray.length; i++) {
+        var composable = executionArray[i];
+        if (typeof composable === 'string') {
+            needsLoading.push(sweva.ComposableLoader.load(composable, this.composables, composable));
+        }
+        else {
+            if (composable.type == 'module') {
+                this.composables[composable.name] = new Module(composable);
+            }
+            else {
+                this.composables[composable.name] = new Composition(composable);
+                needsLoading.push(this.composables[composable.name].loadModules());
+            }
+        }
+    }
+    var self = this;
+    Promise.all(needsLoading).then(function () {
+        //composables should now contain everything
+        self.isReady = true;
+        if (self.wantsToExecute) {
+            self.wantsToExecute = false;
+            self.executeCallback();
+        }
+    });
+}
+
+ExecutionManager.prototype.execute = function (data, input) {
+    var executions = [];
+    var self = this;
+
+    return new Promise(function (resolve, reject) {
+        var func = function (composables, executions, resolve, reject) {
+            return function () {
+                var onlyOneConsumable = false;
+
+                if (Object.keys(composables).length == 1) {
+                    onlyOneConsumable = true;
+                }
+                for (var key in composables) {
+                    if (composables.hasOwnProperty(key)) {
+                        if (onlyOneConsumable) {
+                            executions.push(composables[key].execute(data, input));
+                        }
+                        else {
+                            executions.push(composables[key].execute(data[key], input[key]));
+                        }
+                    }
+                }
+
+                Promise.all(executions).then(function (results) {
+                    if (onlyOneConsumable) {
+                        return resolve(results[0]);
+                    }
+                    resolve(results);
+                })
+                .catch(function (results) {
+                    if (onlyOneConsumable) {
+                        return resolve(results[0]);
+                    }
+                    reject(results);
+                });
+            }
+        }
+
+        if (self.isReady) {
+            func(self.composables, executions, resolve, reject)();
+        }
+        else {
+            self.wantsToExecute = true;
+            self.executeCallback = func(self.composables, executions, resolve, reject);
+        }
+    });
+}
+
+ExecutionManager.prototype.run = ExecutionManager.prototype.execute;
+module.exports = ExecutionManager
+},{}],11:[function(require,module,exports){
 /* axios v0.7.0 | (c) 2015 by Matt Zabriskie */
 !function(e,t){"object"==typeof exports&&"object"==typeof module?module.exports=t():"function"==typeof define&&define.amd?define([],t):"object"==typeof exports?exports.axios=t():e.axios=t()}(this,function(){return function(e){function t(r){if(n[r])return n[r].exports;var o=n[r]={exports:{},id:r,loaded:!1};return e[r].call(o.exports,o,o.exports,t),o.loaded=!0,o.exports}var n={};return t.m=e,t.c=n,t.p="",t(0)}([function(e,t,n){e.exports=n(1)},function(e,t,n){"use strict";var r=n(2),o=n(3),i=n(4),s=n(12),u=e.exports=function(e){"string"==typeof e&&(e=o.merge({url:arguments[0]},arguments[1])),e=o.merge({method:"get",headers:{},timeout:r.timeout,transformRequest:r.transformRequest,transformResponse:r.transformResponse},e),e.withCredentials=e.withCredentials||r.withCredentials;var t=[i,void 0],n=Promise.resolve(e);for(u.interceptors.request.forEach(function(e){t.unshift(e.fulfilled,e.rejected)}),u.interceptors.response.forEach(function(e){t.push(e.fulfilled,e.rejected)});t.length;)n=n.then(t.shift(),t.shift());return n};u.defaults=r,u.all=function(e){return Promise.all(e)},u.spread=n(13),u.interceptors={request:new s,response:new s},function(){function e(){o.forEach(arguments,function(e){u[e]=function(t,n){return u(o.merge(n||{},{method:e,url:t}))}})}function t(){o.forEach(arguments,function(e){u[e]=function(t,n,r){return u(o.merge(r||{},{method:e,url:t,data:n}))}})}e("delete","get","head"),t("post","put","patch")}()},function(e,t,n){"use strict";var r=n(3),o=/^\)\]\}',?\n/,i={"Content-Type":"application/x-www-form-urlencoded"};e.exports={transformRequest:[function(e,t){return r.isFormData(e)?e:r.isArrayBuffer(e)?e:r.isArrayBufferView(e)?e.buffer:!r.isObject(e)||r.isFile(e)||r.isBlob(e)?e:(r.isUndefined(t)||(r.forEach(t,function(e,n){"content-type"===n.toLowerCase()&&(t["Content-Type"]=e)}),r.isUndefined(t["Content-Type"])&&(t["Content-Type"]="application/json;charset=utf-8")),JSON.stringify(e))}],transformResponse:[function(e){if("string"==typeof e){e=e.replace(o,"");try{e=JSON.parse(e)}catch(t){}}return e}],headers:{common:{Accept:"application/json, text/plain, */*"},patch:r.merge(i),post:r.merge(i),put:r.merge(i)},timeout:0,xsrfCookieName:"XSRF-TOKEN",xsrfHeaderName:"X-XSRF-TOKEN"}},function(e,t){"use strict";function n(e){return"[object Array]"===v.call(e)}function r(e){return"[object ArrayBuffer]"===v.call(e)}function o(e){return"[object FormData]"===v.call(e)}function i(e){return"undefined"!=typeof ArrayBuffer&&ArrayBuffer.isView?ArrayBuffer.isView(e):e&&e.buffer&&e.buffer instanceof ArrayBuffer}function s(e){return"string"==typeof e}function u(e){return"number"==typeof e}function a(e){return"undefined"==typeof e}function f(e){return null!==e&&"object"==typeof e}function c(e){return"[object Date]"===v.call(e)}function p(e){return"[object File]"===v.call(e)}function l(e){return"[object Blob]"===v.call(e)}function d(e){return e.replace(/^\s*/,"").replace(/\s*$/,"")}function h(e){return"[object Arguments]"===v.call(e)}function m(){return"undefined"!=typeof window&&"undefined"!=typeof document&&"function"==typeof document.createElement}function y(e,t){if(null!==e&&"undefined"!=typeof e){var r=n(e)||h(e);if("object"==typeof e||r||(e=[e]),r)for(var o=0,i=e.length;i>o;o++)t.call(null,e[o],o,e);else for(var s in e)e.hasOwnProperty(s)&&t.call(null,e[s],s,e)}}function g(){var e={};return y(arguments,function(t){y(t,function(t,n){e[n]=t})}),e}var v=Object.prototype.toString;e.exports={isArray:n,isArrayBuffer:r,isFormData:o,isArrayBufferView:i,isString:s,isNumber:u,isObject:f,isUndefined:a,isDate:c,isFile:p,isBlob:l,isStandardBrowserEnv:m,forEach:y,merge:g,trim:d}},function(e,t,n){(function(t){"use strict";e.exports=function(e){return new Promise(function(r,o){try{"undefined"!=typeof XMLHttpRequest||"undefined"!=typeof ActiveXObject?n(6)(r,o,e):"undefined"!=typeof t&&n(6)(r,o,e)}catch(i){o(i)}})}}).call(t,n(5))},function(e,t){function n(){f=!1,s.length?a=s.concat(a):c=-1,a.length&&r()}function r(){if(!f){var e=setTimeout(n);f=!0;for(var t=a.length;t;){for(s=a,a=[];++c<t;)s&&s[c].run();c=-1,t=a.length}s=null,f=!1,clearTimeout(e)}}function o(e,t){this.fun=e,this.array=t}function i(){}var s,u=e.exports={},a=[],f=!1,c=-1;u.nextTick=function(e){var t=new Array(arguments.length-1);if(arguments.length>1)for(var n=1;n<arguments.length;n++)t[n-1]=arguments[n];a.push(new o(e,t)),1!==a.length||f||setTimeout(r,0)},o.prototype.run=function(){this.fun.apply(null,this.array)},u.title="browser",u.browser=!0,u.env={},u.argv=[],u.version="",u.versions={},u.on=i,u.addListener=i,u.once=i,u.off=i,u.removeListener=i,u.removeAllListeners=i,u.emit=i,u.binding=function(e){throw new Error("process.binding is not supported")},u.cwd=function(){return"/"},u.chdir=function(e){throw new Error("process.chdir is not supported")},u.umask=function(){return 0}},function(e,t,n){"use strict";var r=n(2),o=n(3),i=n(7),s=n(8),u=n(9);e.exports=function(e,t,a){var f=u(a.data,a.headers,a.transformRequest),c=o.merge(r.headers.common,r.headers[a.method]||{},a.headers||{});o.isFormData(f)&&delete c["Content-Type"];var p=new(XMLHttpRequest||ActiveXObject)("Microsoft.XMLHTTP");if(p.open(a.method.toUpperCase(),i(a.url,a.params),!0),p.timeout=a.timeout,p.onreadystatechange=function(){if(p&&4===p.readyState){var n=s(p.getAllResponseHeaders()),r=-1!==["text",""].indexOf(a.responseType||"")?p.responseText:p.response,o={data:u(r,n,a.transformResponse),status:p.status,statusText:p.statusText,headers:n,config:a};(p.status>=200&&p.status<300?e:t)(o),p=null}},o.isStandardBrowserEnv()){var l=n(10),d=n(11),h=d(a.url)?l.read(a.xsrfCookieName||r.xsrfCookieName):void 0;h&&(c[a.xsrfHeaderName||r.xsrfHeaderName]=h)}if(o.forEach(c,function(e,t){f||"content-type"!==t.toLowerCase()?p.setRequestHeader(t,e):delete c[t]}),a.withCredentials&&(p.withCredentials=!0),a.responseType)try{p.responseType=a.responseType}catch(m){if("json"!==p.responseType)throw m}o.isArrayBuffer(f)&&(f=new DataView(f)),p.send(f)}},function(e,t,n){"use strict";function r(e){return encodeURIComponent(e).replace(/%40/gi,"@").replace(/%3A/gi,":").replace(/%24/g,"$").replace(/%2C/gi,",").replace(/%20/g,"+").replace(/%5B/gi,"[").replace(/%5D/gi,"]")}var o=n(3);e.exports=function(e,t){if(!t)return e;var n=[];return o.forEach(t,function(e,t){null!==e&&"undefined"!=typeof e&&(o.isArray(e)&&(t+="[]"),o.isArray(e)||(e=[e]),o.forEach(e,function(e){o.isDate(e)?e=e.toISOString():o.isObject(e)&&(e=JSON.stringify(e)),n.push(r(t)+"="+r(e))}))}),n.length>0&&(e+=(-1===e.indexOf("?")?"?":"&")+n.join("&")),e}},function(e,t,n){"use strict";var r=n(3);e.exports=function(e){var t,n,o,i={};return e?(r.forEach(e.split("\n"),function(e){o=e.indexOf(":"),t=r.trim(e.substr(0,o)).toLowerCase(),n=r.trim(e.substr(o+1)),t&&(i[t]=i[t]?i[t]+", "+n:n)}),i):i}},function(e,t,n){"use strict";var r=n(3);e.exports=function(e,t,n){return r.forEach(n,function(n){e=n(e,t)}),e}},function(e,t,n){"use strict";var r=n(3);e.exports={write:function(e,t,n,o,i,s){var u=[];u.push(e+"="+encodeURIComponent(t)),r.isNumber(n)&&u.push("expires="+new Date(n).toGMTString()),r.isString(o)&&u.push("path="+o),r.isString(i)&&u.push("domain="+i),s===!0&&u.push("secure"),document.cookie=u.join("; ")},read:function(e){var t=document.cookie.match(new RegExp("(^|;\\s*)("+e+")=([^;]*)"));return t?decodeURIComponent(t[3]):null},remove:function(e){this.write(e,"",Date.now()-864e5)}}},function(e,t,n){"use strict";function r(e){var t=e;return s&&(u.setAttribute("href",t),t=u.href),u.setAttribute("href",t),{href:u.href,protocol:u.protocol?u.protocol.replace(/:$/,""):"",host:u.host,search:u.search?u.search.replace(/^\?/,""):"",hash:u.hash?u.hash.replace(/^#/,""):"",hostname:u.hostname,port:u.port,pathname:"/"===u.pathname.charAt(0)?u.pathname:"/"+u.pathname}}var o,i=n(3),s=/(msie|trident)/i.test(navigator.userAgent),u=document.createElement("a");o=r(window.location.href),e.exports=function(e){var t=i.isString(e)?r(e):e;return t.protocol===o.protocol&&t.host===o.host}},function(e,t,n){"use strict";function r(){this.handlers=[]}var o=n(3);r.prototype.use=function(e,t){return this.handlers.push({fulfilled:e,rejected:t}),this.handlers.length-1},r.prototype.eject=function(e){this.handlers[e]&&(this.handlers[e]=null)},r.prototype.forEach=function(e){o.forEach(this.handlers,function(t){null!==t&&e(t)})},e.exports=r},function(e,t){"use strict";e.exports=function(e){return function(t){return e.apply(null,t)}}}])});
 //# sourceMappingURL=axios.min.map

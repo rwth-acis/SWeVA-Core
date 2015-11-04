@@ -14,19 +14,29 @@
     <script>
         function clickbutton(event) {
             var now = Date.now();
-            sweva.ComposableLoader.load('examples/add.json').then(function (composable) {
-                composable.execute({
-                    sum1: 15,
-                    sum2: 3
-                }, {
-                    offset: 0,
-                    invert: true
-                }).then(function (output) {
-                    console.log('time ' + (Date.now() - now) + 'ms');
-                    console.log(output);
-                })
-
+            manager.execute({
+                adder1: {
+                    sum1: 10,
+                    sum2: 50
+                },
+                adder2: {
+                    sum1: 5,
+                    sum2: 15
+                },
+                clone1: {
+                    sum1: 20,
+                    sum2: 10
+                }
+            },
+            {
+                offset: 0,
+                invert: 0
+            })
+            .then(function (result) {
+                console.log('time ' + (Date.now() - now) + 'ms');
+                console.log(result);
             });
+            
         }
     </script>
 </body>

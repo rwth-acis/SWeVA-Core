@@ -5,30 +5,51 @@ var DefinitionError = require('../errors/definitionError.js');
 var ExecutionError = require('../errors/executionError.js');
 
 function Composition(initializationObject) {
-    
     this.initializeProperty(initializationObject, 'modules', {});
     this.initializeProperty(initializationObject, 'links', {});
 
     this.initializeFunction(initializationObject, 'mapInput', 3, function (input, moduleName, modules) {
-        return input[moduleName];
+        if (input.hasOwnProperty(moduleName)) {
+            return input[moduleName];
+        }
+    });
+
+    this.initializeFunction(initializationObject, 'mapDataIn', 3, function (data, moduleName, modules) {
+        if (data.hasOwnProperty(moduleName)) {
+            return data[moduleName];
+        }
+    });
+
+    this.initializeFunction(initializationObject, 'mapDataOut', 1, function (output) {
+        return output;
     });
 
     this.initialize(initializationObject);
-    this.loadModules();
+    this.isReady = false;
+    //this.loadModules();
     this.analyzeLinkGraph();
 }
 Composition.prototype = Object.create(Composable.prototype);
 
 Composition.prototype.loadModules = function () {
-    var promises = [];
-    for (var key in this.modules) {
-        if (this.modules.hasOwnProperty(key)) {
-            console.log(this.modules[key]);
-            promises.push(sweva.ComposableLoader.load(this.modules[key], this.modules, key));
+    var self = this;
+    return new Promise(function (resolve, reject) {
+        var promises = [];
+        for (var key in self.modules) {
+            if (self.modules.hasOwnProperty(key)) {
+                promises.push(sweva.ComposableLoader.load(self.modules[key], self.modules, key));
+            }
         }
-    }
-    Promise.all(promises).then(function () {
-        console.log('loaded all');
+
+        Promise.all(promises).then(function () {
+            self.isReady = true;
+            
+            if (self.wantsToExecute) {
+                self.wantsToExecute = false;
+                self.executeStarterCallback();
+            }
+            resolve();
+        });
     });
 }
 Composition.prototype.hasParameters = function (module) {
@@ -115,7 +136,6 @@ Composition.prototype.analyzeLinkGraph = function () {
     this.dataIn = this.startingModules.length;
     this.dataOut = Object.keys(this.endingModules).length;
 
-
     this.dataInNames = [];
     this.dataOutNames = [];
 
@@ -133,7 +153,6 @@ Composition.prototype.analyzeLinkGraph = function () {
         }
     }
 }
-    
 
 Composition.prototype.moduleQueueExecution = function () {
     for (var i = 0; i < this.unlcearedModules.length; i++) {
@@ -144,7 +163,7 @@ Composition.prototype.moduleQueueExecution = function () {
         var moduleName = this.unlcearedModules[i].module;
         var data = 0;
         var input = 0;
-        
+
         //fill data and input for next module call
         if (this.hasParameters(moduleName)) {
             data = this.parameters[moduleName];
@@ -154,8 +173,8 @@ Composition.prototype.moduleQueueExecution = function () {
         else {
             continue;
         }
-        console.log('executing: ' + moduleName);
-       
+        
+
         //not continued = modulName can be executed
         var self = this;
         var func = function (moduleName, i) {
@@ -171,7 +190,6 @@ Composition.prototype.moduleQueueExecution = function () {
                     else {
                         self.output = output;
                     }
-                    
 
                     //check if this was the last module
                     for (var k = 0; k < self.unlcearedModules.length; k++) {
@@ -185,25 +203,19 @@ Composition.prototype.moduleQueueExecution = function () {
                     }
                 }
                 else {
-
-                    
                     for (var k = 0; k < self.links[moduleName].length; k++) {
-
                         var mapping = self.links[moduleName][k].mapping;
-
 
                         if (typeof mapping === 'undefined') { //no mapping
                             self.parameters[self.links[moduleName][k].to] = output;
                         }
                         else if (typeof mapping === 'string') { //map whole output (i.e. no sub-parts of output present)
-
                             if (mapping.trim().length == 0) {//empty string = no mapping
                                 self.parameters[self.links[moduleName][k].to] = output;
                             }
                             else {
                                 self.addParameter(self.links[moduleName][k].to, mapping, output);
                             }
-                            
                         }
                         else if (typeof mapping === 'object') { //output is an object, so map properties
                             //for each mapping
@@ -216,7 +228,6 @@ Composition.prototype.moduleQueueExecution = function () {
                                     else {
                                         self.addParameter(self.links[moduleName][k].to, mapping[key], output[key]);
                                     }
-                                    
                                 }
                             }
                         }
@@ -224,9 +235,7 @@ Composition.prototype.moduleQueueExecution = function () {
                             //error, no idea what to do with output
                         }
                     }
-                  
                 }
-
 
                 self.moduleQueueExecution.apply(self);
             }
@@ -254,29 +263,34 @@ Composition.prototype.execute = function (data, input) {
 
     return new Promise(function (resolve, reject) {
         //each starting module has an own data block (array element)
-        /*
         for (var i = 0; i < self.startingModules.length; i++) {
-            var moduleNeedsDataBlocks = self.modules[self.startingModules[i]].dataBlocksIn;
-            for (var k = 0; k < moduleNeedsDataBlocks; k++) {
-                self.addParameter(self.startingModules[i], k, self.dataArray[i][k]);
-            }
-        }*/
-       
+            var moduleName=self.startingModules[i];
+            self.parameters[moduleName] = self.mapDataIn(self.data, moduleName, self.modules);
+        }
         for (var key in self.data) {
             if (self.data.hasOwnProperty(key)) {
                 self.parameters[key] = self.data[key]; //copy data directly
             }
         }
-       
+
         self.executeFinishedCallback = function (error) {
             if (error) {
                 reject(error);
             }
             else {
-                resolve(self.output);
+                resolve(self.mapDataOut(self.output));
             }
         }
-        self.moduleQueueExecution.apply(self);
+
+        if (self.isReady) {//all modules are loaded
+            self.moduleQueueExecution.apply(self);
+        }
+        else {
+            self.wantsToExecute = true;//we want to execute, but cannot: tell so the initialization/loading part
+            self.executeStarterCallback = function () { //execute via callback, as soon as loading finished
+                self.moduleQueueExecution.apply(self);
+            }
+        }
     });
 }
 
