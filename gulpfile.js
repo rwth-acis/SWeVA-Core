@@ -165,9 +165,13 @@ gulp.task('serve', [], function () {
         }
     });
 
-    gulp.watch(['app/**/*.html'], reload);
+    gulp.watch(['app/**/*.html',
+    'app/execution.js',
+    'app/examplesJSON/**/*.json'], reload);
+
+    gulp.watch(['app/execution.js'], reload);
     gulp.watch(['app/examples/*.js'], ['composablesToJSON']);
-    gulp.watch(['app/**/*.js'], ['browserify']);
+    gulp.watch(['app/core/**/*.js'], ['browserify']);
 });
 
 // Build and serve the output from the dist build

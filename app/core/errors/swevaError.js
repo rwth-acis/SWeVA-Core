@@ -24,7 +24,7 @@ function SwevaError(message, context, faultyObject) {
                 }
             }
         }
-        console.log(this.faultyObject);        
+              
     }
     else {
         this.faultyObject = null;
@@ -55,7 +55,7 @@ SwevaError.prototype.toString = function () {
         faultyObject = this.faultyObject.toString();
     }
     
-    return '[' + this.getTime() + '] ' + this.name + ' in ' + this.context + ' : ' + this.message + '\n'
+    return '[' + this.getTime() + '] ' + this.name + ' in ' + this.context + ': ' + this.message + '\n'
         + faultyObject;
 }
 module.exports = SwevaError;

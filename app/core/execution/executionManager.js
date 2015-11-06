@@ -1,11 +1,20 @@
 ﻿'use strict';
 
-function ExecutionManager() {
+var ExecutionError = require('../errors/executionError.js');
+
+function ExecutionManager(name) {
+    if (typeof name === 'string') {
+        this.name = name;
+    }
+    else {
+        this.name = 'ExecutionManager';
+    }
 }
 ExecutionManager.prototype.setup = function (executionArray) {
     var needsLoading = [];
     this.composables = {};
     this.isReady = false;
+
     this.wantsToExecute = false;
     //if it is not an array, make it one
     if (!Array.isArray(executionArray)) {
@@ -35,6 +44,11 @@ ExecutionManager.prototype.setup = function (executionArray) {
             self.wantsToExecute = false;
             self.executeCallback();
         }
+    })
+    .catch(function (error) {
+        sweva.ErrorManager.error(
+                      new ExecutionError('Could not load all modules: ' + error,
+                      self.name, error));
     });
 }
 
@@ -69,8 +83,11 @@ ExecutionManager.prototype.execute = function (data, input) {
                 })
                 .catch(function (results) {
                     if (onlyOneConsumable) {
-                        return resolve(results[0]);
+                        return resolve(results);
                     }
+                    sweva.ErrorManager.error(
+                      new ExecutionError('Something unexpected happened: ' + results,
+                      this.name, results));
                     reject(results);
                 });
             }

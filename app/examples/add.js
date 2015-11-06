@@ -14,6 +14,21 @@
       return request;
     },
     dataInNames: ['sum1', 'sum2'],
+    dataInSchema: {
+        type: 'object',
+        properties: {
+            sum1: {
+                type: 'number'
+            },
+            sum2: {
+                type: 'number'
+            }
+        },
+        required: ['sum1','sum2']
+    },
+    dataOutSchema: {
+        type: 'number'        
+    },
     dataOutNames: ['result'],
     inputNames: ['offset', 'invert']
   }

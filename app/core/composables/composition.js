@@ -26,8 +26,6 @@ function Composition(initializationObject) {
 
     this.initialize(initializationObject);
     this.isReady = false;
-    //this.loadModules();
-    this.analyzeLinkGraph();
 }
 Composition.prototype = Object.create(Composable.prototype);
 
@@ -43,12 +41,21 @@ Composition.prototype.loadModules = function () {
 
         Promise.all(promises).then(function () {
             self.isReady = true;
-            
+
             if (self.wantsToExecute) {
                 self.wantsToExecute = false;
                 self.executeStarterCallback();
             }
+
+            //ok all loaded, now we can analyze graph and check for compatibility
+            self.analyzeLinkGraph();
             resolve();
+        })
+        .catch(function (error) {
+            sweva.ErrorManager.error(
+                       new ExecutionError('Could not load all modules: ' + error,
+                       self.context, self.modules));
+            //reject(sweva.ErrorManager.getLastError());
         });
     });
 }
@@ -95,7 +102,245 @@ Composition.prototype.reset = function () {
         }
     }
 }
+
+//Tarjan's strongly connected components algorithm
+//https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
+Composition.prototype.hasCycles = function (startingNodeArray) {
+    var nodes = {};
+    var edges = {}
+
+    for (var key in this.modules) {
+        if (this.modules.hasOwnProperty(key)) {
+            nodes[key] = {}
+        }
+    }
+
+    for (var key in this.links) {
+        if (this.links.hasOwnProperty(key)) {
+            edges[key] = [];
+            for (var i = 0; i < this.links[key].length; i++) {
+                edges[key].push(this.links[key][i].to);
+            }
+        }
+    }
+
+    /*nodes = {
+        '1': {},
+        '2': {},
+        '3': {},
+        '4': {},
+        '5': {},
+        '6': {},
+        '7': {}
+    }
+
+    edges = {
+        '1': ['4'],
+        '2': ['4', '5'],
+        '3': ['5'],
+        '4': ['6'],
+        '5': ['6'],
+        '6': ['7']
+    }*/
+    //Kahn's algorithm
+    //https://en.wikipedia.org/wiki/Topological_sorting
+    var L = [];
+    var S = startingNodeArray.slice();
+    var uniqueL = true;
+    while (S.length > 0) {
+        var n = S.pop();
+
+        //sorting only works, if all elements are unique!
+        if (L.indexOf(n) >= 0) {
+            uniqueL = false;
+            break;
+        }
+        L.push(n);
+        if (edges.hasOwnProperty(n)) {
+            for (var i = 0; i < edges[n].length; i++) {
+                var m = edges[n][i];
+                edges[n].splice(i, 1);
+
+                i--;
+
+                var hasIncoming = false;
+                for (var key in edges) {
+                    if (edges.hasOwnProperty(key)) {
+                        for (var k = 0; k < edges[key].length; k++) {
+                            if (edges[key][k] == m) {
+                                hasIncoming = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasIncoming) {
+                        break;
+                    }
+                }
+                if (!hasIncoming) {
+                    S.push(m);
+                }
+                if (edges[n].length == 0) {
+                    delete edges[n];
+                    break;
+                }
+            }
+        }
+    }
+
+    //if edges exist, or L has non unique elements: there is a cycle
+    if (Object.keys(edges).length > 0 || !uniqueL) {
+        return true;
+    }
+    return false;
+}
+
+Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, obj1Schema, obj2Schema, mappingFrom, mappingTo) {
+    if (obj1Schema == null || obj2Schema == null) { //schemas optional (null), so give the benefit of the doubt
+        return true;
+    }
+    var error = null;
+    function metaLevel(level, from, to) {
+        for (var key in to) {
+            if (!from.hasOwnProperty(key)) {
+                error = {
+                    level: level,
+                    message: 'missing property "' + key + '"'
+                }
+                return false;
+            }
+
+            if (key === 'items') {
+                if (!metaLevel(level + '.' + key, from[key], to[key])) {
+                    return false;
+                }
+            }
+            else if (key === 'properties') {
+                if (!propertyLevel(level + '.' + key, from[key], to[key])) {
+                    return false;
+                }
+            }
+            else if (key === 'required') {
+                //special: required array order should be ignored
+                from[key].sort();
+                to[key].sort();
+
+                if (from[key].length != to[key].length) {
+                    error = {
+                        level: level,
+                        message: 'array length different for "' + key + '" ' + from[key].toString() + ' != ' + to[key].toString()
+                    }
+                    return false;
+                }
+
+                for (var i = 0; i < from[key].length; i++) {
+                    if (from[key][i] !== to[key][i]) {
+                        error = {
+                            level: level,
+                            message: 'array element difference for "' + key + '" ( ' + from[key][i] + ' != ' + to[key][i]
+                                + ' ) ' + from[key].toString() + ' != ' + to[key].toString()
+                        }
+
+                        return false;
+                    }
+                }
+            }
+            else {
+                if (from[key] !== to[key]) {
+                    error = {
+                        level: level,
+                        message: 'inequal property value "' + key + '" ( ' + from[key] + ' != ' + to[key] + ' )'
+                    }
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function propertyLevel(level, from, to) {
+        for (var key in to) {
+            if (!from.hasOwnProperty(key)) {
+                error = {
+                    level: level,
+                    message: 'missing property "' + key + '"'
+                }
+                return false;
+            }
+            if (!metaLevel(level + '.' + key, from[key], to[key])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    var result = true;
+
+    function scopeOnMapping(schema, mapping) {
+        var hasSchema = true;
+
+        if (schema.hasOwnProperty('properties')) {
+            if (schema.properties.hasOwnProperty(mapping)) {
+                return schema.properties[mapping];
+            }
+            else {
+                return null;
+            }
+        } else {
+            return null;
+        }
+
+        return schema;
+    }
+    var OriginalObj1Schema = obj1Schema; //for error output
+    var OriginalObj2Schema =obj2Schema;
+    if (typeof mappingTo === 'string') {
+        var temp = scopeOnMapping(obj2Schema, mappingTo);
+        if (temp) {
+            obj2Schema = temp;
+        }
+        else {
+            error = {
+                level: '',
+                message: 'Module "' + obj2Name + '" has no schema for property "' + mappingTo + '" provided by module "' + obj1Name + '"'
+            }
+        }
+    }
+
+    if (typeof mappingFrom === 'string') {
+        var temp = scopeOnMapping(obj1Schema, mappingFrom);
+        if (temp) {
+            obj1Schema = temp;
+        }
+        else {
+            error = {
+                level: '',
+                message: 'Module "' + obj1Name + '" has no schema for property "' + mappingFrom + '" required by module "' + obj2Name + '"'
+            }
+        }
+    }
+
+    if (!error) {
+        result = metaLevel('', obj1Schema, obj2Schema);
+    }
+
+    if (error) {
+        var relevantMapping = '';
+        if (typeof mappingFrom === 'string' && typeof mappingTo === 'string') {
+            relevantMapping = ' for the mapping "' + mappingFrom + '" -> "' + mappingTo + '"';
+        } else if (typeof mappingTo === 'string') {
+            relevantMapping = ' for the mapping "' + mappingTo + '"';
+        }
+        sweva.ErrorManager.error(
+                      new DefinitionError('Schemas of "' + obj1Name + '" and "' + obj2Name + '" incompatible' + relevantMapping + ': '
+            + error.level + ': ' + error.message,
+                      this.context, { [obj1Name]: OriginalObj1Schema, [obj2Name]: OriginalObj2Schema }));
+    }
+    return result;
+}
+
 Composition.prototype.analyzeLinkGraph = function () {
+    this.invalidLinkGraph = false;
     this.startingModules = Object.keys(this.modules);
     this.endingModules = {};
     for (var key in this.modules) {
@@ -104,20 +349,78 @@ Composition.prototype.analyzeLinkGraph = function () {
         }
     }
 
-    //remove inverseLinks later, if actually not needed
-    this.inverseLinks = {};
-
+    //find startingModules that have no ingoing edges
+    //find endingModules that have no outgoing edges
     for (var key in this.links) {
         if (this.links.hasOwnProperty(key)) {
             for (var i = 0; i < this.links[key].length; i++) {
-                //build inverse graph
                 var prop = this.links[key][i].to;
-                if (!this.inverseLinks.hasOwnProperty(prop)) {
-                    this.inverseLinks[prop] = [key];
+                var mapping = this.links[key][i].mapping;
+                
+                //check if linking to existing module!
+                if (!this.modules.hasOwnProperty(prop)) {
+                    sweva.ErrorManager.error(
+                      new DefinitionError('Module "' + key + '" links to undefined module "' + prop + '"!',
+                      this.context, Object.keys(this.modules)));
+                    this.invalidLinkGraph = true;
                 }
                 else {
-                    this.inverseLinks[prop].push(key);
+                    if (typeof mapping === 'undefined') { //no mapping => dataOutA -> dataInB
+                        //check for schema compatibility
+
+                        var compatibleSchemas = this.checkSchemaCompatibility(key, prop, this.modules[key].dataOutSchema, this.modules[prop].dataInSchema);
+                        if (!compatibleSchemas) {
+                            this.invalidLinkGraph = true;
+                        }
+                    }
+                    else if (typeof mapping === 'string') {
+                        var toModule = this.modules[prop];
+
+                        if (toModule.dataInNames.indexOf(mapping) < 0) {
+                            sweva.ErrorManager.error(
+                                 new DefinitionError('Module "' + key + '" links to undefined dataIn "' + mapping + '" of module "' + prop + '"!',
+                                 this.context, toModule.dataInNames));
+                            this.invalidLinkGraph = true;
+                        }
+                        else if (this.modules[key].dataOutSchema && this.modules[prop].dataInSchema != null) {//schemas are optional, so only check if available
+                            var compatibleSchemas = this.checkSchemaCompatibility(key, prop, this.modules[key].dataOutSchema, this.modules[prop].dataInSchema, null, mapping);
+                            if (!compatibleSchemas) {
+                                this.invalidLinkGraph = true;
+                            }
+                        }
+                    }
+                    else { //object
+                        for (var mapKey in mapping) {
+                            if (mapping.hasOwnProperty(mapKey)) {
+                                if (this.modules[key].dataOutNames.indexOf(mapKey) < 0) { //module has no such dataOut it tries to map to another module
+                                    sweva.ErrorManager.error(
+                                         new DefinitionError('Module "' + key + '" maps undefined dataIn "' + mapKey + '" to module "' + prop + '"!',
+                                         this.context, this.modules[key].dataOutNames));
+                                    this.invalidLinkGraph = true;
+                                    break;
+                                }
+
+                                if (this.modules[prop].dataInNames.indexOf(mapping[mapKey]) < 0) { //module has no such dataIn
+                                    sweva.ErrorManager.error(
+                                         new DefinitionError('Module "' + key + '" links to undefined dataIn "' + mapping + '" of module "' + prop + '"!',
+                                         this.context, this.modules[prop].dataInNames));
+                                    this.invalidLinkGraph = true;
+                                    break;
+                                }
+
+                                if (this.modules[key].dataOutSchema && this.modules[prop].dataInSchema != null) {//schemas are optional, so only check if available
+                                    var compatibleSchemas = this.checkSchemaCompatibility(key, prop, this.modules[key].dataOutSchema, this.modules[prop].dataInSchema, mapKey, mapping[mapKey]);
+                                    if (!compatibleSchemas) {
+                                        this.invalidLinkGraph = true;
+                                        break;
+                                    }
+                                }
+
+                            }
+                        }
+                    }
                 }
+
                 //if one module A points to module B, then B cannot be startingModule
                 var propIndex = this.startingModules.indexOf(prop);
                 if (propIndex >= 0) {
@@ -130,6 +433,15 @@ Composition.prototype.analyzeLinkGraph = function () {
                 }
             }
         }
+    }
+
+    //check for cycles
+    var hasCycles = this.hasCycles(this.startingModules);
+    if (hasCycles) {
+        sweva.ErrorManager.error(
+                       new DefinitionError('There are cycles in the linkage of modules!',
+                       this.context, this.links));
+        this.invalidLinkGraph = true;
     }
 
     //implicit imformation
@@ -147,11 +459,7 @@ Composition.prototype.analyzeLinkGraph = function () {
             this.dataOutNames.push(key);
         }
     }
-    for (var key in this.endingModules) {
-        if (this.endingModules.hasOwnProperty(key)) {
-            this.dataOutNames.push(key);
-        }
-    }
+    
 }
 
 Composition.prototype.moduleQueueExecution = function () {
@@ -173,7 +481,6 @@ Composition.prototype.moduleQueueExecution = function () {
         else {
             continue;
         }
-        
 
         //not continued = modulName can be executed
         var self = this;
@@ -243,7 +550,11 @@ Composition.prototype.moduleQueueExecution = function () {
         if (!this.unlcearedModules[i].cleared) {
             this.unlcearedModules[i].cleared = true;
 
-            this.modules[moduleName].execute(data, input).then(func(moduleName, i));
+            this.modules[moduleName].execute(data, input, this.context, moduleName)
+                .then(func(moduleName, i))
+                .catch(function (error) {
+                    //error is logged earlier, but how to handle?
+                });
         }
 
         //debug stuff
@@ -254,42 +565,56 @@ Composition.prototype.moduleQueueExecution = function () {
         console.log(st);*/
     }
 }
-Composition.prototype.execute = function (data, input) {
+Composition.prototype.execute = function (data, input, context, alias) {
     var self = this;
     this.data = data;
     this.input = input;
-
+    this.updateContext(context, alias);
     this.reset();
 
     return new Promise(function (resolve, reject) {
-        //each starting module has an own data block (array element)
-        for (var i = 0; i < self.startingModules.length; i++) {
-            var moduleName=self.startingModules[i];
-            self.parameters[moduleName] = self.mapDataIn(self.data, moduleName, self.modules);
-        }
-        for (var key in self.data) {
-            if (self.data.hasOwnProperty(key)) {
-                self.parameters[key] = self.data[key]; //copy data directly
+        if (!self.invalidLinkGraph && self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
+            //each starting module has an own data block (array element)
+            for (var i = 0; i < self.startingModules.length; i++) {
+                var moduleName = self.startingModules[i];
+                self.parameters[moduleName] = self.mapDataIn(self.data, moduleName, self.modules);
             }
-        }
+            for (var key in self.data) {
+                if (self.data.hasOwnProperty(key)) {
+                    self.parameters[key] = self.data[key]; //copy data directly
+                }
+            }
 
-        self.executeFinishedCallback = function (error) {
-            if (error) {
-                reject(error);
+            self.executeFinishedCallback = function (error) {
+                if (error) {
+                    sweva.ErrorManager.error(
+                       new ExecutionError('Something unexpected happened: ' + error,
+                       this.context, error));
+                    reject(sweva.ErrorManager.getLastError());
+                }
+                else {
+                    var result = self.mapDataOut(self.output)
+                    if (self.validateTypes('dataOut', result)) {
+                        resolve(result);
+                    }
+                    else {
+                        reject(sweva.ErrorManager.getLastError());
+                    }
+                }
             }
-            else {
-                resolve(self.mapDataOut(self.output));
-            }
-        }
 
-        if (self.isReady) {//all modules are loaded
-            self.moduleQueueExecution.apply(self);
-        }
-        else {
-            self.wantsToExecute = true;//we want to execute, but cannot: tell so the initialization/loading part
-            self.executeStarterCallback = function () { //execute via callback, as soon as loading finished
+            if (self.isReady) {//all modules are loaded
                 self.moduleQueueExecution.apply(self);
             }
+            else {
+                self.wantsToExecute = true;//we want to execute, but cannot: tell so the initialization/loading part
+                self.executeStarterCallback = function () { //execute via callback, as soon as loading finished
+                    self.moduleQueueExecution.apply(self);
+                }
+            }
+        }
+        else {
+            reject(sweva.ErrorManager.getLastError());
         }
     });
 }

@@ -14,7 +14,31 @@
             };
         },
         dataInNames: ['sum1', 'sum2'],
+        dataInSchema: {
+            type: 'object',
+            properties: {
+                sum1: {
+                    type: 'number'
+                },
+                sum2: {
+                    type: 'number'
+                }
+            },
+            required: ['sum1', 'sum2']
+        },
         dataOutNames: ['first', 'second'],
+        dataOutSchema: {
+            type: 'object',
+            properties: {
+                first: {
+                    type: 'number'
+                },
+                second: {
+                    type: 'number'
+                }
+            },
+            required: ['first', 'second']
+        },
         inputNames: []
     }
 })();

@@ -16,9 +16,16 @@ ErrorManager.prototype.error = function (error) {
 ErrorManager.prototype.getLog = function () {
     var result = '';
     for (var i = 0; i < this.queue.length; i++) {
-        result += this.queue[i].toString() +'\n';
+        result += this.queue[i].toString() + '\n';
     }
     return result;
+}
+
+ErrorManager.prototype.getLastError = function () {
+    if (this.queue.length > 0) {
+        return this.queue[this.queue.length - 1];
+    }
+    return null;
 }
 
 module.exports = ErrorManager;

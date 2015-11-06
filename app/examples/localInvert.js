@@ -6,7 +6,7 @@
             return -data;
         },
         dataInNames: ['data'],
-        dataOutNames: ['result'],
-        inputNames: []
+        dataOutNames: ['result']
+        
     }
 })();

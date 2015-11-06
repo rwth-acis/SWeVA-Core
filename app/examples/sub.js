@@ -13,8 +13,23 @@
                 });
             return request;
         },
-        dataInNames: ['sub1', 'sub1'],
+        dataInNames: ['sub1', 'sub2'],
+        dataInSchema: {
+            type: 'object',
+            properties: {
+                sub1: {
+                    type: 'number'
+                },
+                sub2: {
+                    type: 'number'
+                }
+            },
+            required: ['sub1', 'sub2']
+        },
         dataOutNames: ['result'],
+        dataOutSchema: {
+            type: 'number'
+        },
         inputNames: ['offset', 'invert']
     }
 })();

@@ -5,7 +5,6 @@ var DefinitionError = require('../errors/definitionError.js');
 var ExecutionError = require('../errors/executionError.js');
 
 function Module(initializationObject) {
-
     this.initialize(initializationObject);
 
     this.initializeFunction(initializationObject, 'request', 2,
@@ -20,9 +19,6 @@ function Module(initializationObject) {
         function (response, input) { return response.data });
 
     this.initializeFunction(initializationObject, 'compute', 2, null);
-  
-   
-    
 }
 Module.prototype = Object.create(Composable.prototype);
 Module.prototype.constructor = Module;
@@ -42,29 +38,45 @@ Module.prototype.callService = function (request, input) {
             else {
                 reject(response);
             }
-            
         });
     });
 }
 
-Module.prototype.execute = function (data, input) {
+Module.prototype.execute = function (data, input, context, alias) {
     var self = this;
+    this.updateContext(context, alias);
+    //validateInput
 
     return new Promise(function (resolve, reject) {
-    
-        if (self.compute !== null) {
-            resolve(self.compute(data, input));
+        if (self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
+            if (self.compute !== null) {
+                var result = self.compute(data, input);
+                if (self.validateTypes('dataOut', result)) {
+                    resolve(result);
+                }
+                else {
+                    reject(sweva.ErrorManager.getLastError());
+                }
+            }
+            else {
+                self.callService(self.request(data, input), input).then(function (output) {
+                    if (self.validateTypes('dataOut', output)) {
+                        resolve(output);
+                    }
+                    else {
+                        reject(sweva.ErrorManager.getLastError());
+                    }
+                }).catch(function (error) {
+                    sweva.ErrorManager.error(
+                       new ExecutionError('Something unexpected happened: ' + error,
+                       this.context, error));
+                    reject(sweva.ErrorManager.getLastError());
+                });
+            }
         }
         else {
-            self.callService(self.request(data, input), input).then(function (output) {
-                resolve(output);
-            }).catch(function (err) {
-                sweva.ErrorManager.error(
-                   new ExecutionError('something happened unexpected happened' + err,
-                   'Module.' + this.name, err));
-                console.error(err);
-            });
-        }       
+            reject(sweva.ErrorManager.getLastError());
+        }
     });
 }
 module.exports = Module;
