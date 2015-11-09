@@ -137,7 +137,11 @@ gulp.task('copy', function () {
 gulp.task('clean', function (cb) {
     del(['.tmp', 'dist'], cb);
 });
-
+gulp.task('uglify', [], function () {
+    return gulp.src(['app/core.build.js'])
+       .pipe($.uglify().on('error', gutil.log))
+       .pipe(gulp.dest('app/'));
+});
 // Watch files for changes & reload
 gulp.task('serve', [], function () {
     browserSync({

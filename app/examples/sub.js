@@ -2,8 +2,8 @@
     return {
         type: 'module',
         name: 'sub',
-        request: function (data, input) {
-            var request = sweva.axios.get('http://localhost:8080/example/calc/sub/'
+        request: function (data, input, libs) {
+            var request = libs.axios.get('http://localhost:8080/example/calc/sub/'
                 + data.sub1 + '/' + data.sub2,
                 {
                     params: {

@@ -2,8 +2,10 @@
   return {
     type: 'module',
     name: 'add',
-    request: function (data, input) {
-      var request = sweva.axios.get('http://localhost:8080/example/calc/add/'
+    request: function (data, input, libs) {
+       
+        
+        var request = libs.axios.get('http://localhost:8080/example/calc/add/'
           + data.sum1 + '/' + data.sum2,
           {
             params: {

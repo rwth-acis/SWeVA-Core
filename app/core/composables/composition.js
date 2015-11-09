@@ -8,19 +8,19 @@ function Composition(initializationObject) {
     this.initializeProperty(initializationObject, 'modules', {});
     this.initializeProperty(initializationObject, 'links', {});
 
-    this.initializeFunction(initializationObject, 'mapInput', 3, function (input, moduleName, modules) {
+    this.initializeFunction(initializationObject, 'mapInput', 4, function (input, moduleName, modules, libs) {
         if (input.hasOwnProperty(moduleName)) {
             return input[moduleName];
         }
     });
 
-    this.initializeFunction(initializationObject, 'mapDataIn', 3, function (data, moduleName, modules) {
+    this.initializeFunction(initializationObject, 'mapDataIn', 4, function (data, moduleName, modules, libs) {
         if (data.hasOwnProperty(moduleName)) {
             return data[moduleName];
         }
     });
 
-    this.initializeFunction(initializationObject, 'mapDataOut', 1, function (output) {
+    this.initializeFunction(initializationObject, 'mapDataOut', 2, function (output, libs) {
         return output;
     });
 
@@ -331,10 +331,16 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
         } else if (typeof mappingTo === 'string') {
             relevantMapping = ' for the mapping "' + mappingTo + '"';
         }
+
+        var faultyObject = {};
+        faultyObject[obj1Name] = OriginalObj1Schema;
+        faultyObject[obj2Name] = OriginalObj2Schema;
+        
+
         sweva.ErrorManager.error(
                       new DefinitionError('Schemas of "' + obj1Name + '" and "' + obj2Name + '" incompatible' + relevantMapping + ': '
             + error.level + ': ' + error.message,
-                      this.context, { [obj1Name]: OriginalObj1Schema, [obj2Name]: OriginalObj2Schema }));
+                      this.context, faultyObject));
     }
     return result;
 }
@@ -467,16 +473,16 @@ Composition.prototype.moduleQueueExecution = function () {
         if (this.unlcearedModules[i].cleared) {
             continue;
         }
-
+       
         var moduleName = this.unlcearedModules[i].module;
         var data = 0;
         var input = 0;
-
+        
         //fill data and input for next module call
         if (this.hasParameters(moduleName)) {
             data = this.parameters[moduleName];
 
-            input = this.mapInput(this.input, moduleName, this.modules);
+            input = this.mapInput(this.input, moduleName, this.modules, sweva.libs);
         }
         else {
             continue;
@@ -487,7 +493,7 @@ Composition.prototype.moduleQueueExecution = function () {
         var func = function (moduleName, i) {
             return function (output) {
                 //console.log(moduleName + " " + output)
-
+                //console.log('finished: ' + moduleName);
                 if (self.endingModules.hasOwnProperty(moduleName)) {
                     var allCleared = true;
                     //if we have only one output module, we do not need a named property
@@ -549,7 +555,7 @@ Composition.prototype.moduleQueueExecution = function () {
         };
         if (!this.unlcearedModules[i].cleared) {
             this.unlcearedModules[i].cleared = true;
-
+            //console.log('executing: ' + moduleName);
             this.modules[moduleName].execute(data, input, this.context, moduleName)
                 .then(func(moduleName, i))
                 .catch(function (error) {
@@ -577,7 +583,7 @@ Composition.prototype.execute = function (data, input, context, alias) {
             //each starting module has an own data block (array element)
             for (var i = 0; i < self.startingModules.length; i++) {
                 var moduleName = self.startingModules[i];
-                self.parameters[moduleName] = self.mapDataIn(self.data, moduleName, self.modules);
+                self.parameters[moduleName] = self.mapDataIn(self.data, moduleName, self.modules, sweva.libs);
             }
             for (var key in self.data) {
                 if (self.data.hasOwnProperty(key)) {
@@ -593,7 +599,7 @@ Composition.prototype.execute = function (data, input, context, alias) {
                     reject(sweva.ErrorManager.getLastError());
                 }
                 else {
-                    var result = self.mapDataOut(self.output)
+                    var result = self.mapDataOut(self.output, sweva.libs);
                     if (self.validateTypes('dataOut', result)) {
                         resolve(result);
                     }
@@ -602,7 +608,7 @@ Composition.prototype.execute = function (data, input, context, alias) {
                     }
                 }
             }
-
+            
             if (self.isReady) {//all modules are loaded
                 self.moduleQueueExecution.apply(self);
             }

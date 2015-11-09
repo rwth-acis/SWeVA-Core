@@ -40,6 +40,7 @@ ExecutionManager.prototype.setup = function (executionArray) {
     Promise.all(needsLoading).then(function () {
         //composables should now contain everything
         self.isReady = true;
+        console.log('all loaded');
         if (self.wantsToExecute) {
             self.wantsToExecute = false;
             self.executeCallback();

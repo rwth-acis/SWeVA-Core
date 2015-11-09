@@ -15,3 +15,18 @@ globalObject.sweva.ExecutionManager = require('./execution/executionManager.js')
 
 var ErrorManager = require('./errors/errorManager.js');
 globalObject.sweva.ErrorManager = new ErrorManager();
+
+
+var SwevaScript = require('./swevaScript/swevaScript.js');
+globalObject.sweva.SwevaScript = new SwevaScript();
+
+
+globalObject.sweva.libs = {
+    axios: globalObject.sweva.axios,
+    get: globalObject.sweva.SwevaScript.get
+}
+
+//settings
+globalObject.sweva.settings = {
+    enableSandboxing: true
+}

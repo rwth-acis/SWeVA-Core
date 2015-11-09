@@ -36,7 +36,7 @@ Composable.prototype.initializeFunction = function (initializationObject,
     property, expectedArgumentsCount, defaultValue) {
     if (initializationObject.hasOwnProperty(property)) {
         if (typeof initializationObject[property] === 'function') {
-            if (initializationObject[property].length >= expectedArgumentsCount) {
+            if (initializationObject[property].length >= 0){// expectedArgumentsCount) {
                 this[property] = initializationObject[property];
             }
             else {

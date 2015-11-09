@@ -4,19 +4,7 @@ var axios = require('../../../bower_components/axios/dist/axios.min.js');
 
 var Module = require('../composables/module.js');
 var Composition = require('../composables/composition.js');
-
-//https://stackoverflow.com/posts/26917938/revisions
-if (typeof String.prototype.parseFunction != 'function') {
-    String.prototype.parseFunction = function () {
-        var funcReg = /function *\(([^()]*)\)[ \n\t]*{(.*)}/gmi;
-        var match = funcReg.exec(this.replace(/\n/g, ' '));
-
-        if (match) {
-            return new Function(match[1].split(','), match[2]);
-        }
-        return null;
-    };
-}
+var DefinitionError = require('../errors/definitionError.js');
 
 function ComposableLoader(basePath, suffix) {
     this.basePath = basePath || '';
@@ -24,7 +12,7 @@ function ComposableLoader(basePath, suffix) {
     this.composables = {};
     this.waitingList = {};
 }
-ComposableLoader.prototype.convertToObject = function (json) {
+ComposableLoader.prototype.convertToObject = function (json, context) {
     var result = json;
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
@@ -33,7 +21,15 @@ ComposableLoader.prototype.convertToObject = function (json) {
                 var str = new String(json[key][0]);
 
                 if (str.trim().indexOf('function') == 0) {
-                    json[key] = json[key].join('').parseFunction();
+                    
+                    json[key] = sweva.SwevaScript.sanitize(json[key].join(''),
+                        function (error) {
+                            sweva.ErrorManager.error(
+                              new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
+                              context, json));
+                        });
+
+                    //console.log(json[key]);
                 }
             }
         }
@@ -88,9 +84,10 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
         }
         else {
             self.composables[name] = true; //set key and prevent unnecessary loads, while loading is already in progress
-            var request = axios.get(self.basePath + name + self.suffix)
+            var url = self.basePath + name + self.suffix;
+            var request = axios.get(url)
             .then(function (response) {
-                var composable = self.convertToObject(response.data);
+                var composable = self.convertToObject(response.data, url);
                 console.log('loaded ' + composable.name);
 
                 if (composable.type == 'module') {
@@ -102,9 +99,9 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
                 }
                 else {
                     composable = new Composition(composable);
-                    
+
                     self.assignLoadedComposables(name, composable, assignToObject, property);
-                    
+
                     composable.loadModules().then(function () {
                         resolve(composable);
                     });

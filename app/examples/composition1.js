@@ -57,7 +57,7 @@
             ]
         },
         inputNames: ['offset', 'invert'],
-        mapInput: function (input, moduleName, modules) {
+        mapInput: function (input, moduleName, modules, libs) {
             return input;
         }
     }
