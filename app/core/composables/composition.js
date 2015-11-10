@@ -54,7 +54,7 @@ Composition.prototype.loadModules = function () {
         .catch(function (error) {
             sweva.ErrorManager.error(
                        new ExecutionError('Could not load all modules: ' + error,
-                       self.context, self.modules));
+                       this.context, self.modules));
             //reject(sweva.ErrorManager.getLastError());
         });
     });
@@ -468,7 +468,7 @@ Composition.prototype.analyzeLinkGraph = function () {
     
 }
 
-Composition.prototype.moduleQueueExecution = function () {
+Composition.prototype.moduleQueueExecution = function (context) {
     for (var i = 0; i < this.unlcearedModules.length; i++) {
         if (this.unlcearedModules[i].cleared) {
             continue;
@@ -550,13 +550,13 @@ Composition.prototype.moduleQueueExecution = function () {
                     }
                 }
 
-                self.moduleQueueExecution.apply(self);
+                self.moduleQueueExecution.apply(self, [context]);
             }
         };
         if (!this.unlcearedModules[i].cleared) {
             this.unlcearedModules[i].cleared = true;
             //console.log('executing: ' + moduleName);
-            this.modules[moduleName].execute(data, input, this.context, moduleName)
+            this.modules[moduleName].execute(data, input, context, moduleName, this.progress)
                 .then(func(moduleName, i))
                 .catch(function (error) {
                     //error is logged earlier, but how to handle?
@@ -571,12 +571,14 @@ Composition.prototype.moduleQueueExecution = function () {
         console.log(st);*/
     }
 }
-Composition.prototype.execute = function (data, input, context, alias) {
+Composition.prototype.execute = function (data, input, context, alias, progress) {
     var self = this;
     this.data = data;
     this.input = input;
-    this.updateContext(context, alias);
+    context = this.getNewContext(context, alias);
     this.reset();
+    this.progress = progress;
+    
 
     return new Promise(function (resolve, reject) {
         if (!self.invalidLinkGraph && self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
@@ -595,7 +597,7 @@ Composition.prototype.execute = function (data, input, context, alias) {
                 if (error) {
                     sweva.ErrorManager.error(
                        new ExecutionError('Something unexpected happened: ' + error,
-                       this.context, error));
+                       context, error));
                     reject(sweva.ErrorManager.getLastError());
                 }
                 else {
@@ -610,12 +612,12 @@ Composition.prototype.execute = function (data, input, context, alias) {
             }
             
             if (self.isReady) {//all modules are loaded
-                self.moduleQueueExecution.apply(self);
+                self.moduleQueueExecution.apply(self, [context]);
             }
             else {
                 self.wantsToExecute = true;//we want to execute, but cannot: tell so the initialization/loading part
                 self.executeStarterCallback = function () { //execute via callback, as soon as loading finished
-                    self.moduleQueueExecution.apply(self);
+                    self.moduleQueueExecution.apply(self, [context]);
                 }
             }
         }

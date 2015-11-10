@@ -12,6 +12,16 @@ function ComposableLoader(basePath, suffix) {
     this.composables = {};
     this.waitingList = {};
 }
+
+ComposableLoader.prototype.size = function () {
+    return Object.keys(this.composables).length;
+}
+ComposableLoader.prototype.get = function (name) {
+    return this.composables[name];
+}
+ComposableLoader.prototype.add = function (name, composable) {
+    this.composables[name] = composable;
+}
 ComposableLoader.prototype.convertToObject = function (json, context) {
     var result = json;
     for (var key in json) {

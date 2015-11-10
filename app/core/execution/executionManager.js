@@ -9,8 +9,30 @@ function ExecutionManager(name) {
     else {
         this.name = 'ExecutionManager';
     }
+    this.modulesTotal = 1;
+    this.modulesDone = 0;
+    this.progressCallback = null;
+}
+ExecutionManager.prototype.onProgress = function (callback) {
+    this.progressCallback = callback;
 }
 ExecutionManager.prototype.setup = function (executionArray) {
+    function countModules(composable) {
+        if (typeof composable.modules === 'undefined') {
+            return 1;
+        }
+        else {
+            var count = 0;
+
+            for (var key in composable.modules) {
+                if (composable.modules.hasOwnProperty(key)) {
+                    count += countModules(composable.modules[key]);
+                }
+            }
+            return count;
+        }
+    }
+
     var needsLoading = [];
     this.composables = {};
     this.isReady = false;
@@ -29,15 +51,26 @@ ExecutionManager.prototype.setup = function (executionArray) {
         else {
             if (composable.type == 'module') {
                 this.composables[composable.name] = new Module(composable);
+                sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
             }
             else {
                 this.composables[composable.name] = new Composition(composable);
+                sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
                 needsLoading.push(this.composables[composable.name].loadModules());
             }
         }
     }
     var self = this;
     Promise.all(needsLoading).then(function () {
+
+        //let's quickly check, ho meny modules are used in total to have a rough estimate for progress later on
+        var moduleCount = 0;
+        for (var i = 0; i < executionArray.length; i++) {
+            moduleCount += countModules(sweva.ComposableLoader.get(executionArray[i]));
+        }
+        self.modulesTotal = moduleCount;
+        self.modulesDone = 0;
+
         //composables should now contain everything
         self.isReady = true;
         console.log('all loaded');
@@ -45,6 +78,8 @@ ExecutionManager.prototype.setup = function (executionArray) {
             self.wantsToExecute = false;
             self.executeCallback();
         }
+       
+        //console.log('Modules counted: ' + moduleCount);
     })
     .catch(function (error) {
         sweva.ErrorManager.error(
@@ -53,6 +88,15 @@ ExecutionManager.prototype.setup = function (executionArray) {
     });
 }
 
+ExecutionManager.prototype.progressUpdate = function (alias, name, context) {
+    
+    if (this.progressCallback !== null) {
+        this.modulesDone++;
+        
+        var progress = this.modulesDone/+this.modulesTotal;
+        this.progressCallback((progress*100).toFixed(0));
+    }
+}
 ExecutionManager.prototype.execute = function (data, input) {
     var executions = [];
     var self = this;
@@ -60,30 +104,30 @@ ExecutionManager.prototype.execute = function (data, input) {
     return new Promise(function (resolve, reject) {
         var func = function (composables, executions, resolve, reject) {
             return function () {
-                var onlyOneConsumable = false;
+                var onlyOneComposable = false;
 
                 if (Object.keys(composables).length == 1) {
-                    onlyOneConsumable = true;
+                    onlyOneComposable = true;
                 }
                 for (var key in composables) {
                     if (composables.hasOwnProperty(key)) {
-                        if (onlyOneConsumable) {
-                            executions.push(composables[key].execute(data, input));
+                        if (onlyOneComposable) {
+                            executions.push(composables[key].execute(data, input, '', key, self.progressUpdate.bind(self)));
                         }
                         else {
-                            executions.push(composables[key].execute(data[key], input[key]));
+                            executions.push(composables[key].execute(data[key], input[key], '', key, self.progressUpdate.bind(self)));
                         }
                     }
                 }
 
                 Promise.all(executions).then(function (results) {
-                    if (onlyOneConsumable) {
+                    if (onlyOneComposable) {
                         return resolve(results[0]);
                     }
                     resolve(results);
                 })
                 .catch(function (results) {
-                    if (onlyOneConsumable) {
+                    if (onlyOneComposable) {
                         return resolve(results);
                     }
                     sweva.ErrorManager.error(

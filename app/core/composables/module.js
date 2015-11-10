@@ -24,8 +24,10 @@ Module.prototype = Object.create(Composable.prototype);
 Module.prototype.constructor = Module;
 
 Module.prototype.callService = function (request, input) {
-    var self = this; 
-    return new Promise(function (resolve, reject) {        
+    var self = this;
+   
+    return new Promise(function (resolve, reject) {
+        
         request
         .then(function (response) {
             resolve(self.response(response, input, sweva.libs));
@@ -42,9 +44,11 @@ Module.prototype.callService = function (request, input) {
     });
 }
 
-Module.prototype.execute = function (data, input, context, alias) {
+Module.prototype.execute = function (data, input, context, alias, progress) {
     var self = this;
-    this.updateContext(context, alias);
+    
+    context = this.getNewContext(context, alias);
+   
     //validateInput
     
     return new Promise(function (resolve, reject) {
@@ -52,6 +56,10 @@ Module.prototype.execute = function (data, input, context, alias) {
             if (self.compute !== null) {
                 var result = self.compute(data, input, sweva.libs);
                 if (self.validateTypes('dataOut', result)) {
+                    //report progress
+                    if (typeof progress !== 'undefined') {
+                        progress(alias, self.name, context);
+                    }
                     resolve(result);
                 }
                 else {
@@ -63,7 +71,11 @@ Module.prototype.execute = function (data, input, context, alias) {
                 self.callService(self.request(data, input, sweva.libs), input).then(function (output) {
                     
                     if (self.validateTypes('dataOut', output)) {
-                       
+                        //report progress
+                        if (typeof progress !== 'undefined') {
+                            
+                            progress(alias, self.name, context);
+                        }
                         resolve(output);
                     }
                     else {
@@ -72,7 +84,7 @@ Module.prototype.execute = function (data, input, context, alias) {
                 }).catch(function (error) {
                     sweva.ErrorManager.error(
                        new ExecutionError('Something unexpected happened: ' + error,
-                       self.context, error));
+                       context, error));
                     reject(sweva.ErrorManager.getLastError());
                 });
             }

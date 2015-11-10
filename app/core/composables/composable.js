@@ -57,7 +57,7 @@ Composable.prototype.initializeFunction = function (initializationObject,
         this[property] = defaultValue;
     }
 }
-Composable.prototype.updateContext = function (context, alias) {
+Composable.prototype.getNewContext = function (context, alias) {
     if (typeof context === 'string') {
         if (typeof alias !== 'string') {
             alias = '';
@@ -65,7 +65,7 @@ Composable.prototype.updateContext = function (context, alias) {
         else {
             alias = ': ' + alias;
         }
-        this.context = context + '.' + this.constructor.name + '[' + this.name + alias + ']';
+        return context + '.' + this.constructor.name + '[' + this.name + alias + ']';
     }
 }
 Composable.prototype.validateTypes = function (type, obj) {
