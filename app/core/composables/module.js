@@ -34,7 +34,7 @@ Module.prototype.callService = function (request, input) {
         })
         .catch(function (response) {
             //if we have a function to deal with errors from service directly...
-            if (self.requestError !== null) {
+            if (typeof self.requestError === 'function') {
                 resolve(self.requestError(response, input, sweva.libs));
             }
             else {
@@ -53,7 +53,8 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
     
     return new Promise(function (resolve, reject) {
         if (self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
-            if (self.compute !== null) {
+            
+            if (typeof self.compute === 'function') {
                 var result = self.compute(data, input, sweva.libs);
                 if (self.validateTypes('dataOut', result)) {
                     //report progress

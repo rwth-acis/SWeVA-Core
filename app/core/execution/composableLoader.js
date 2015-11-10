@@ -6,6 +6,7 @@ var Module = require('../composables/module.js');
 var Composition = require('../composables/composition.js');
 var DefinitionError = require('../errors/definitionError.js');
 
+
 function ComposableLoader(basePath, suffix) {
     this.basePath = basePath || '';
     this.suffix = suffix || '.json';
@@ -31,7 +32,6 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                 var str = new String(json[key][0]);
 
                 if (str.trim().indexOf('function') == 0) {
-                    
                     json[key] = sweva.SwevaScript.sanitize(json[key].join(''),
                         function (error) {
                             sweva.ErrorManager.error(
@@ -98,24 +98,49 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
             var request = axios.get(url)
             .then(function (response) {
                 var composable = self.convertToObject(response.data, url);
-                console.log('loaded ' + composable.name);
 
-                if (composable.type == 'module') {
-                    composable = new Module(composable);
-
-                    self.assignLoadedComposables(name, composable, assignToObject, property);
-
-                    resolve(composable);
+                var func = function (comp) {
+                    return function (res, rej) {                        
+                        res(comp);
+                    }
                 }
-                else {
-                    composable = new Composition(composable);
+                var internalPromise = new Promise(func(composable));
 
-                    self.assignLoadedComposables(name, composable, assignToObject, property);
+                //check if components just extends existing one
+                if (composable.hasOwnProperty('extends')) {
+                    var baseComposableName = composable.extends;
+                    var func2 = function (baseComposableName, composable) {
+                        return function (res, rej) {
+                            self.load(baseComposableName).then(function (comp) {
+                                res(comp.extendWith(composable));                                
+                            });
+                        }
+                    };
 
-                    composable.loadModules().then(function () {
+                    internalPromise = new Promise(func2(baseComposableName, composable));
+                }
+               
+
+                internalPromise.then(function (composable) {
+                    console.log('loaded ' + composable.name);
+
+                    if (composable.type == 'module') {
+                        composable = new Module(composable);
+
+                        self.assignLoadedComposables(name, composable, assignToObject, property);
+
                         resolve(composable);
-                    });
-                }
+                    }
+                    else {
+                        composable = new Composition(composable);
+
+                        self.assignLoadedComposables(name, composable, assignToObject, property);
+
+                        composable.loadModules().then(function () {
+                            resolve(composable);
+                        });
+                    }
+                });
             })
             .catch(function (response) {
                 reject(self.basePath + name + self.suffix); //could not load

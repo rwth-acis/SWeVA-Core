@@ -7,6 +7,8 @@ manager.setup('composition1');
 manager.onProgress(function (progress) {
     console.log(progress);
 });
+
+
 manager.execute({
 adder1: {
         sum1: 10,

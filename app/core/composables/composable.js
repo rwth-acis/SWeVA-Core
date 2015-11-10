@@ -2,6 +2,8 @@
 
 var DefinitionError = require('../errors/definitionError.js');
 var ExecutionError = require('../errors/executionError.js');
+var Clone = require('../../../node_modules/clone/clone.js');
+
 function Composable() {
 }
 
@@ -9,6 +11,7 @@ Composable.prototype.name = 'someModule';
 
 Composable.prototype.initialize = function (initializationObject) {
     this.initializeProperty(initializationObject, 'name', 'someModule');
+    this.initializeProperty(initializationObject, 'type', 'module');
     this.initializeProperty(initializationObject, 'dataInSchema', null);
     this.initializeProperty(initializationObject, 'dataOutSchema', null);
     this.initializeProperty(initializationObject, 'inputSchema', null);
@@ -36,7 +39,9 @@ Composable.prototype.initializeFunction = function (initializationObject,
     property, expectedArgumentsCount, defaultValue) {
     if (initializationObject.hasOwnProperty(property)) {
         if (typeof initializationObject[property] === 'function') {
-            if (initializationObject[property].length >= 0){// expectedArgumentsCount) {
+
+
+            if (initializationObject[property].length >= expectedArgumentsCount) {
                 this[property] = initializationObject[property];
             }
             else {
@@ -46,6 +51,9 @@ Composable.prototype.initializeFunction = function (initializationObject,
                     initializationObject[property].length,
                     this.context, initializationObject[property]));
             }
+        }
+        else if(initializationObject[property] == null){
+            // for now ignore, as some functions are optional
         }
         else {
             sweva.ErrorManager.error(
@@ -57,6 +65,17 @@ Composable.prototype.initializeFunction = function (initializationObject,
         this[property] = defaultValue;
     }
 }
+
+Composable.prototype.extendWith = function (extender) {
+    var cloned = Clone(this);
+    for (var key in extender) {
+        if (extender.hasOwnProperty(key) && key != 'extends') {
+            cloned[key] = extender[key];
+        }
+    }
+    return cloned;
+}
+
 Composable.prototype.getNewContext = function (context, alias) {
     if (typeof context === 'string') {
         if (typeof alias !== 'string') {

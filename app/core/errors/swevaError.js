@@ -1,18 +1,16 @@
 ﻿'use strict';
 
 function SwevaError(message, context, faultyObject) {
-    
     this.name = 'SwevaError';
     this.message = message || 'Default Message';
     this.stack = (new Error()).stack;
     this.context = context;
 
     if (faultyObject !== 'undefined') {
-
         //shallow copy: should provide enough information and save RAM
         //copy is needed, as we need the object ecactly at the time the error occurred
         this.faultyObject = faultyObject;
-       
+
         if (typeof faultyObject === 'function') {
             //slow, but works for now
             this.faultyObject = eval('(' + faultyObject.toString() + ')');
@@ -24,15 +22,13 @@ function SwevaError(message, context, faultyObject) {
                 }
             }
         }
-              
     }
     else {
         this.faultyObject = null;
     }
-    
+
     this.time = Date.now();
 }
-
 
 SwevaError.prototype = Object.create(Error.prototype, {
     constructor: {
@@ -48,13 +44,13 @@ SwevaError.prototype.getTime = function () {
 
 SwevaError.prototype.toString = function () {
     var faultyObject = '';
-    if(typeof this.faultyObject === 'object') {
-        faultyObject= JSON.stringify(this.faultyObject, null, 4);
-    } 
+    if (typeof this.faultyObject === 'object') {
+        faultyObject = JSON.stringify(this.faultyObject, null, 4);
+    }
     else {
         faultyObject = this.faultyObject.toString();
     }
-    
+
     return '[' + this.getTime() + '] ' + this.name + ' in ' + this.context + ': ' + this.message + '\n'
         + faultyObject;
 }
