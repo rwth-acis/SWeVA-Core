@@ -2,7 +2,7 @@
     return {
         type: 'composition',
         name: 'composition1',
-        modules: {
+        composables: {
             'adder1': 'localAdd',
             'adder2': 'add',
             'adder3': 'add',

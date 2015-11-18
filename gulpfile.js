@@ -24,6 +24,8 @@ var fs = require('fs');
 var historyApiFallback = require('connect-history-api-fallback');
 var ext_replace = require('gulp-ext-replace');
 
+var shell = require('gulp-shell');
+
 
 var through = require('through2');
 var gutil = require('gulp-util');
@@ -35,7 +37,6 @@ function prefixStream(prefixText) {
     return stream;
 }
 
-
 var composableToJSON = function () {
     return through.obj(function (file, enc, cb) {
         if (file.isNull()) {
@@ -46,16 +47,15 @@ var composableToJSON = function () {
             var fileContents = new String(file.contents) + '';
             //we now have the relevent object
             var resultObj = new Function('return' + fileContents)();
-           
+
             for (var key in resultObj) {
                 if (resultObj.hasOwnProperty(key)) {
                     if (typeof resultObj[key] === 'function') {
                         var funcStringArray = resultObj[key].toString().match(/[^\r\n]+/g);
                         resultObj[key] = funcStringArray;
-                    }                    
+                    }
                 }
             }
-            
 
             //pretty print
             var result = JSON.stringify(resultObj, null, 4);
@@ -63,17 +63,11 @@ var composableToJSON = function () {
         }
         if (file.isStream()) {
             throw new PluginError('composableToJSON', 'Only Buffer format is supported');
-           
         }
 
         cb(null, file);
-
     });
 }
-
-
-
-
 
 // Lint JavaScript
 gulp.task('jshint', function () {
@@ -90,8 +84,6 @@ gulp.task('jshint', function () {
 });
 
 gulp.task('browserify', function () {
-
-   
     return browserify({
         entries: [
             './app/core/core.js'
@@ -101,18 +93,13 @@ gulp.task('browserify', function () {
     .pipe(source('core.build.js'))
     .pipe(gulp.dest('./app/'))
     ;//.pipe(reload({ stream: true, once: true }));
-
-
-    
 });
 gulp.task('composablesToJSON', function () {
     return gulp.src(['app/examples/*.js'])
     .pipe(ext_replace('.json'))
     .pipe(composableToJSON())
     .pipe(gulp.dest('app/examplesJSON'));
-
 });
-
 
 // Copy all files at the root level (app)
 gulp.task('copy', function () {
@@ -128,7 +115,6 @@ gulp.task('copy', function () {
       'bower_components/**/*'
     ]).pipe(gulp.dest('dist/bower_components'));
 
-
     return merge(app, bower)
       .pipe($.size({ title: 'copy' }));
 });
@@ -142,6 +128,11 @@ gulp.task('uglify', [], function () {
        .pipe($.uglify().on('error', gutil.log))
        .pipe(gulp.dest('app/'));
 });
+
+gulp.task('docs', shell.task([
+  './node_modules/.bin/jsdoc app/core/ -r -R README.md -d docs -t ./node_modules/ink-docstrap/template -c jsdocConfig.json'
+]));
+
 // Watch files for changes & reload
 gulp.task('serve', [], function () {
     browserSync({
@@ -211,4 +202,3 @@ gulp.task('default', ['clean'], function (cb) {
       'vulcanize', 'rename-index', // 'cache-config',
       cb);
 });
-

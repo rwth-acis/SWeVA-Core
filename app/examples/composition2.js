@@ -2,7 +2,7 @@
     return {
         type: 'composition',
         name: 'composition2',
-        modules: {
+        composables: {
             'composition1': 'composition1',
             'sub5': 'sub',
             'add5': 'add'

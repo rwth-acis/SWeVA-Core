@@ -22,12 +22,21 @@
     "through2": "2.0.0",
     "gulp-util": "3.0.7",
     "js-tokens": "1.0.2",
-    "clone": "1.0.2"
+    "clone": "1.0.2",
+    "gulp-shell": "0.5.1",
+    "minami": "1.1.1",
+    "jsdoc": "3.3.3",
+    "loke-jsdoc-theme": "2.1.0",
+    "docker": "git+https://git@github.com/jbt/docker.git#v0.3"
   },
-  "scripts": {    
-    "start": "gulp serve"
+  "scripts": {
+    "start": "gulp serve",
+    "jsdoc": "./node_modules/.bin/jsdoc app/core/ -r -R README.md -d docs/jsdoc -t ./node_modules/loke-jsdoc-theme -c jsdocConfig.json",
+    "docker": "./node_modules/.bin/docker -i app/core/ -o docs/docker -n -u",
+    "doc": "npm run jsdoc && npm run docker"
   },
   "engines": {
     "node": ">=0.10.0"
   }
+  
 }

@@ -6,23 +6,73 @@ var Module = require('../composables/module.js');
 var Composition = require('../composables/composition.js');
 var DefinitionError = require('../errors/definitionError.js');
 
-
+/**
+ * Responsible for dynamically loading composables from a web address.
+ * Loaded composables are stored in an internal dictionary, so they only need to be downloaded once.
+ * @constructor
+ * @param {string} [basePath=''] - The base address from which to download the composable. Gets prepended to the composable name.
+ * @param {string} [suffix=.json] - The suffix that gets appended to the composable name.
+ */
 function ComposableLoader(basePath, suffix) {
+    /**
+    * The base address from which to download the composable. Gets prepended to the composable name.
+    * @name ComposableLoader#basePath
+    * @type {string}
+    */
     this.basePath = basePath || '';
+    /**
+    * The suffix that gets appended to the composable name.
+    * @name ComposableLoader#suffix
+    * @type {string}
+    */
     this.suffix = suffix || '.json';
+    /**
+    * Dictionary of the composable names and the corresponding composable objects.
+    * @name ComposableLoader#composables
+    * @type {Object.<string, Composable>}
+    */
     this.composables = {};
+    /**
+    * Dictionary of a waiting list, where loaded composables can be assigned to external objects
+    * @name ComposableLoader#waitingList
+    * @type {Object.<string, Object>}
+    */
     this.waitingList = {};
 }
 
+/**
+ * @returns {number} - The number of stored composables.
+ */
 ComposableLoader.prototype.size = function () {
     return Object.keys(this.composables).length;
 }
+/**
+ * @param {string} name - The name of the composable to return.
+ * @returns {Composable} - The composable object.
+ */
 ComposableLoader.prototype.get = function (name) {
     return this.composables[name];
 }
+/**
+ * Composable objects can be directly added, without having to download them.
+ * This can be used e.g. for rapid prototyping.
+ * @param {string} name - The name of the composable to add.
+ * @paranm {Composable} composable - The composable to add.
+ */
 ComposableLoader.prototype.add = function (name, composable) {
     this.composables[name] = composable;
 }
+/**
+ * Converts a JSON representation of a composable into a full composable object.
+ * Since composables can have custom functions defined, and JSON does not support functions, we cannot use JSON.parse.
+ * Instead functions are encoded as string arrays in JSON and then assembled.
+ * {@link SwevaScript} is used to sanitize the functions.
+ * 
+ * @protected
+ * @param {Object} json - The JSON object of the composable.
+ * @param {string} context - The context of execution (for error messages).
+ * @returns {composableInitalizer} - Composable initalization object.
+ */
 ComposableLoader.prototype.convertToObject = function (json, context) {
     var result = json;
     for (var key in json) {
@@ -30,16 +80,15 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
             //reconstruct functions from string
             if (typeof json[key][0] == 'string') {
                 var str = new String(json[key][0]);
-
+                //check if string array starts with 'function' -> assemble function into object
                 if (str.trim().indexOf('function') == 0) {
+                    //first sanitize the script to prevent malicious code execution
                     json[key] = sweva.SwevaScript.sanitize(json[key].join(''),
                         function (error) {
                             sweva.ErrorManager.error(
                               new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
                               context, json));
                         });
-
-                    //console.log(json[key]);
                 }
             }
         }
@@ -48,32 +97,56 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     return result;
 }
 
+/**
+ * Helper function, that assigns the composables to the internal dictionary and optionally to external objects with a specified property.
+ * This can be used to directly fill another external dictionary of composables, like the {@link Composition} composable dictionary.
+ * @protected
+ * @param {string} name - The name of the composable.
+ * @param {Composable} composable - The composable object.
+ * @param {Object} [assignToObject] - The external object to wich the composable should be assigned to.
+ * @param {string} [property] - The porperty of the external object to wich the composable should be assigned to.
+ */
 ComposableLoader.prototype.assignLoadedComposables = function (name, composable, assignToObject, property) {
     this.composables[name] = composable;
 
-    if (typeof assignToObject !== 'undefined' && assignToObject !== null) {
+    //check if the optional assignToObject is given
+    if (typeof assignToObject !== 'undefined' && assignToObject !== null && typeof property === 'string') {
         assignToObject[property] = composable;
-        //deal with waitinglist: as the caller has to wait for 'then' we, can set the required values now with some delay
+    }
 
-        if (this.waitingList.hasOwnProperty(name)) {
-            for (var i = 0; i < this.waitingList[name].length; i++) {
-                var assignTo = this.waitingList[name][i].assignTo;
-                var prop = this.waitingList[name][i].prop;
+    //deal with waitinglist: as the caller has to wait for 'then' we, can set the required values now with some delay
+    if (this.waitingList.hasOwnProperty(name)) {
+        //for each object, that waits for the composable to be assigned to
+        for (var i = 0; i < this.waitingList[name].length; i++) {
+            var assignTo = this.waitingList[name][i].assignTo;
+            var prop = this.waitingList[name][i].prop;
 
-                assignTo[prop] = composable;
-            }
-            delete this.waitingList[name];
+            assignTo[prop] = composable;
         }
+        //remove element from the waitingList
+        delete this.waitingList[name];
     }
 }
+/**
+ * Loads a composable by the given name from a web resource.
+ * If no basePath was given in the constructor, use the full web address as the name.
+ * @param {string} name - The name of the composable.
+ * @param {Object} [assignToObject] - The external object to wich the composable should be assigned to.
+ * @param {string} [property] - The porperty of the external object to wich the composable should be assigned to.
+ * @returns {Promise<Composable>} - The loaded composable object.
+ */
 ComposableLoader.prototype.load = function (name, assignToObject, property) {
     var self = this;
-
+    //return a promise, since loading is ansynchronuous
     return new Promise(function (resolve, reject) {
+        //check if the name was already loaded or is currently being loaded
         if (self.composables.hasOwnProperty(name)) {
-            if (self.composables[name] === true) {//we have only our placeholder, no real value yet
+            //we have only our placeholder, no real value yet
+            //this means the composable is currently requested, but not loaded
+            if (self.composables[name] === true) {
                 //put in waitinglist, which is checked after each load
-                if (typeof assignToObject !== 'undefined' && assignToObject !== null) {
+                //but only, if it needs to be assigned externally
+                if (typeof assignToObject !== 'undefined' && assignToObject !== null && typeof property === 'string') {
                     if (!self.waitingList.hasOwnProperty(name)) {
                         self.waitingList[name] = [];
                     }
@@ -82,7 +155,7 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
                         prop: property
                     });
                 }
-
+                //load from dictionary
                 resolve(self.composables[name]);
             }
             else {
@@ -92,51 +165,60 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
                 resolve(self.composables[name]);
             }
         }
+        //not already in dictionary, needs to be loaded
         else {
-            self.composables[name] = true; //set key and prevent unnecessary loads, while loading is already in progress
+            //set key and prevent unnecessary loads, while loading is already in progress
+            self.composables[name] = true;
+            //construct url
             var url = self.basePath + name + self.suffix;
             var request = axios.get(url)
             .then(function (response) {
+                //convert the response JSON to an actual composable
                 var composable = self.convertToObject(response.data, url);
-
+                //closue function, dummy
                 var func = function (comp) {
-                    return function (res, rej) {                        
+                    return function (res, rej) {
                         res(comp);
                     }
                 }
                 var internalPromise = new Promise(func(composable));
 
-                //check if components just extends existing one
+                //check if composable just extends existing one
                 if (composable.hasOwnProperty('extends')) {
                     var baseComposableName = composable.extends;
+                    //create a closure to load the base composable
                     var func2 = function (baseComposableName, composable) {
                         return function (res, rej) {
                             self.load(baseComposableName).then(function (comp) {
-                                res(comp.extendWith(composable));                                
+                                //extend loaded composable with extension
+                                res(comp.extendWith(composable));
                             });
                         }
                     };
-
+                    //adjust internal promise to load the base composable first, before extending it.
                     internalPromise = new Promise(func2(baseComposableName, composable));
                 }
-               
 
                 internalPromise.then(function (composable) {
+                    //log as loaded
                     console.log('loaded ' + composable.name);
-
+                    //if the loaded composable is a module
                     if (composable.type == 'module') {
+                        //construct Module
                         composable = new Module(composable);
 
                         self.assignLoadedComposables(name, composable, assignToObject, property);
 
                         resolve(composable);
                     }
+                    //if the loaded composable is a composition
                     else {
+                        //construct Composition
                         composable = new Composition(composable);
 
                         self.assignLoadedComposables(name, composable, assignToObject, property);
-
-                        composable.loadModules().then(function () {
+                        //load composables required for the composition
+                        composable.loadComposables().then(function () {
                             resolve(composable);
                         });
                     }
@@ -148,6 +230,9 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
         }
     });
 }
+/**
+ * Clears the internal dictionaries.
+ */
 ComposableLoader.prototype.clear = function () {
     this.composables = {};
     this.waitingList = {};

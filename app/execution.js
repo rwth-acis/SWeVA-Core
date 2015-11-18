@@ -5,12 +5,12 @@ var now = Date.now();
 var manager = new sweva.ExecutionManager();
 manager.setup('composition1');
 manager.onProgress(function (progress) {
-    console.log(progress);
+    //console.log(progress);
 });
 
 
 manager.execute({
-adder1: {
+    adder1: {
         sum1: 10,
         sum2: 50
     },
