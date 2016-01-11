@@ -3,5 +3,5 @@ dist
 bower_components
 .tmp
 app/examplesJSON/*
-app/core.build.js
+
 docs
