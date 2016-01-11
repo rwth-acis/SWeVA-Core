@@ -1,6 +1,5 @@
 ﻿'use strict';
-
-var axios = require('../../../bower_components/axios/dist/axios.min.js');
+//var axios = require('../../../bower_components/axios/dist/axios.min.js');
 
 var Module = require('../composables/module.js');
 var Composition = require('../composables/composition.js');
@@ -67,7 +66,7 @@ ComposableLoader.prototype.add = function (name, composable) {
  * Since composables can have custom functions defined, and JSON does not support functions, we cannot use JSON.parse.
  * Instead functions are encoded as string arrays in JSON and then assembled.
  * {@link SwevaScript} is used to sanitize the functions.
- * 
+ *
  * @protected
  * @param {Object} json - The JSON object of the composable.
  * @param {string} context - The context of execution (for error messages).
@@ -75,10 +74,11 @@ ComposableLoader.prototype.add = function (name, composable) {
  */
 ComposableLoader.prototype.convertToObject = function (json, context) {
     var result = json;
+   
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
             //reconstruct functions from string
-            if (typeof json[key][0] == 'string') {
+            if (typeof json[key][0] === 'string') {
                 var str = new String(json[key][0]);
                 //check if string array starts with 'function' -> assemble function into object
                 if (str.trim().indexOf('function') == 0) {
@@ -91,10 +91,197 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                         });
                 }
             }
+
+            if (typeof json[key] === 'object') {
+                json[key] = this.convertToObject(json[key], context);
+            }
         }
     }
 
     return result;
+}
+ComposableLoader.prototype.getDefaultModule = function () {
+    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: [],\n    inputSchema: {},\n    request: function (data, input, libs) {\n      return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return response.data\n    }    \n}";
+}
+ComposableLoader.prototype.getDefaultComposition = function () {
+    return "{\n    type: \'composition\',\n    name: \'composition1\',\n    dataInNames: [],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: [],\n    inputSchema: {},\n    mapDataIn: function (data, composableName, composables, libs) {\n        if (data.hasOwnProperty(composableName)) {\n            return libs.get(data, composableName);\n        }\n        return null;\n    },\n    mapDataOut: function (output, libs) {\n        return output;\n    },\n    mapInput: function (input, moduleName, modules, libs) {\n        if (input.hasOwnProperty(moduleName)) {\n            return libs.get(input, moduleName);\n        }\n        return null;\n    }\n}";
+}
+ComposableLoader.prototype.convertCodeToJson = function (string) {
+    var result = ''
+    var lines = string.split(/\r?\n/)
+    var regexFunction = new RegExp(/^\s*(\w)+\s*:\s*function/);
+    var regexProperty = new RegExp(/^\s*(\w)+\s*/);
+
+    var funcLines = false;
+    var funcLinesFirst = false;
+    var braceCount = 0;
+    var funcLinesJustFinished= false;
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+
+        if (!funcLines) {
+            if (funcLinesJustFinished && line.indexOf(':') >= 0) {
+                funcLinesJustFinished = false;
+                result += ',\n';
+            }
+            if (regexFunction.test(line)) {
+                funcLines = true;
+
+                var index = line.indexOf('function');
+
+                var linePart = line.slice(0, index);
+                var match = regexProperty.exec(linePart);
+                if (match != null) {
+                    linePart = linePart.slice(0, match.index) + '"' + linePart.slice(match.index, match.index + match[0].length) + '"' + linePart.slice(match.index + match[0].length);
+                }
+                linePart = linePart.replace(/'/g, '"');
+
+                result += linePart;
+
+                result += '["' + line.slice(index) + '",\n';
+                funcLinesFirst = true;
+            }
+            else {
+                var match = regexProperty.exec(line);
+                if (match != null) {
+                    line = line.slice(0, match.index) + '"' + line.slice(match.index, match.index + match[0].length) + '"' + line.slice(match.index + match[0].length);
+                }
+                line = line.replace(/'/g, '"');                
+                result += line + '\n';
+            }
+        }
+        if (funcLines) {
+            var inQuotes = false;
+            var inSingleQuotes = false;
+            for (var k = 0; k < line.length; k++) {
+                var c = line[k];
+
+                if (c == '"' && !inSingleQuotes) {
+                    inQuotes = !inQuotes;
+                    line = line.slice(0, k) + '\\' + line.slice(k);
+                    k++;
+                }
+                else if (c == '\'' && !inQuotes) {
+                    inQuotes = !inSingleQuotes;
+                }
+                else if (c == '{' && !inQuotes && !inSingleQuotes) {
+                    braceCount++;
+                }
+                else if (c == '}' && !inQuotes && !inSingleQuotes) {
+                    braceCount--;
+                }
+            }
+            if (funcLinesFirst) {
+                funcLinesFirst = false;
+            }
+            else {
+                if (braceCount == 0) {
+                    if (line.length > 0 && line.indexOf(',') >= line.length - 1) {
+                        line = line.slice(0, line.length - 1);
+                    }
+                    result += '"' + line + '"' + '\n';
+                }
+                else {
+                    result += '"' + line + '"' + ',' + '\n';
+                }
+            }
+
+            if (braceCount == 0) {
+                funcLines = false;
+                funcLinesFirst = false;
+                result += ']\n';
+                funcLinesJustFinished=true;
+               
+            }
+        }
+    }
+
+    if (result.indexOf('{') !== 0) {
+        return '{' + result + '}';
+    }
+    return result;
+}
+ComposableLoader.prototype.convertJsonToCode = function (obj) {
+    function getSpaces(spaces) {
+        var result = '';
+        for (var i = 0; i < spaces; i++) {
+            result += ' ';
+        }
+        return result;
+    }
+    function stringify(object, level, spaces) {
+        var result = '';
+
+        var ident = getSpaces(level * spaces);
+
+        var keys = Object.keys(object);
+
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            result += ident + key + ': ';
+            if (typeof object[key] === 'string') {
+                result += '\'' + object[key] + '\'';
+            }
+            else if (typeof object[key] === 'object') {
+                if (Array.isArray(object[key])) {
+                    var arrayContent = '';
+
+                    if (object[key].length > 0 && typeof object[key][0] === 'string' && object[key][0].trim().indexOf('function') == 0) {
+                        //decode function
+                        var internalLevel = 0;
+                        for (var k = 0; k < object[key].length; k++) {
+                            var line = object[key][k].trim();
+                            if (line.indexOf('}') == 0) {
+                                internalLevel--;
+                                if (internalLevel < 0) {
+                                    internalLevel = 0;
+                                }
+                            }
+                            arrayContent += (k == 0 ? '' : ident) + getSpaces(spaces * internalLevel) + line + (k >= object[key].length - 1 ? '' : '\n');
+                            if (line.length > 0 && line.indexOf('{') == line.length - 1) {
+                                internalLevel++;
+                            }
+                        }
+                        result += arrayContent + ident;
+                    }
+                    else {
+                        for (var k = 0; k < object[key].length; k++) {
+                            var element = object[key][k];
+                            arrayContent += ident + getSpaces(spaces);
+                            if (typeof element === 'string') {
+                                arrayContent += '\'' + element + '\'';
+                            }
+                            else if (typeof element === 'object') {
+                                arrayContent += '{\n' + stringify(object[key], level + 1, spaces) + ident + '}';
+                            }
+                            else {
+                                arrayContent += element;
+                            }
+                            if (k < object[key].length - 1) {
+                                arrayContent += ',';
+                            }
+                            arrayContent += '\n';
+                        }
+                        result += '[\n' + arrayContent + ident + ']';
+                    }
+                }
+                else {
+                    result += '{\n' + stringify(object[key], level + 1, spaces) + ident + '}';
+                }
+            }
+
+            else {
+                result += '\'' + object[key] + '\'';
+            }
+
+            if (i < keys.length - 1) {
+                result += ',';
+            }
+            result += '\n';
+        }
+        return result;
+    }
+    return stringify(obj, 0, 2);
 }
 
 /**
@@ -137,6 +324,7 @@ ComposableLoader.prototype.assignLoadedComposables = function (name, composable,
  */
 ComposableLoader.prototype.load = function (name, assignToObject, property) {
     var self = this;
+
     //return a promise, since loading is ansynchronuous
     return new Promise(function (resolve, reject) {
         //check if the name was already loaded or is currently being loaded
@@ -165,13 +353,14 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
                 resolve(self.composables[name]);
             }
         }
-        //not already in dictionary, needs to be loaded
+            //not already in dictionary, needs to be loaded
         else {
             //set key and prevent unnecessary loads, while loading is already in progress
             self.composables[name] = true;
             //construct url
             var url = self.basePath + name + self.suffix;
-            var request = axios.get(url)
+
+            sweva.axios.get(url)
             .then(function (response) {
                 //convert the response JSON to an actual composable
                 var composable = self.convertToObject(response.data, url);
@@ -211,7 +400,7 @@ ComposableLoader.prototype.load = function (name, assignToObject, property) {
 
                         resolve(composable);
                     }
-                    //if the loaded composable is a composition
+                        //if the loaded composable is a composition
                     else {
                         //construct Composition
                         composable = new Composition(composable);

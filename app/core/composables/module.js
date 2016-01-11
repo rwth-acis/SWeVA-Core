@@ -146,7 +146,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
     
     context = this.getNewContext(context, alias);
    
-   
+    
     
     return new Promise(function (resolve, reject) {
 
@@ -177,6 +177,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
                             
                             progress(alias, self.name, context);
                         }
+                        
                         resolve(output);
                     }
                     else {

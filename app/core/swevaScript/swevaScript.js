@@ -50,7 +50,9 @@ function SwevaScript() {
     */
     this.allowedGlobals = {
         Math: true,
-        console: true
+        console: true,
+        'true': true,
+        'false': true
     }
 }
 
@@ -174,6 +176,7 @@ SwevaScript.prototype.sanitize = function (code, errorCallback) {
             
             //enforce strict behavior, shadow globals, append verified code
             var fn_text = '"use strict"; var ' + globals + ';' + match[2] + ';';
+            
             var fn = new Function(match[1].split(','), fn_text);//generate sanitized function
 
             return fn;

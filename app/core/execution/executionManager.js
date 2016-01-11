@@ -1,6 +1,8 @@
 ﻿'use strict';
 
 var ExecutionError = require('../errors/executionError.js');
+var Module = require('../composables/module.js');
+var Composition = require('../composables/composition.js');
 /**
  * An ExecutionManager is responsible for managing the execution process of compositions and modules.
  * It has two phases: A setup phase, were all dependencies are loaded and initialized and an execution phase,
@@ -46,8 +48,9 @@ ExecutionManager.prototype.onProgress = function (callback) {
 /**
  * Initializes all required composables, loads dependencies, validates.
  * @param {Array.<string|Composable>} executionArray - Array of composables that will be executed.
+ * @param {boolean} [isPureObject=false] - Set this to true, if passing pure JavaScript Objects and not just JSON.
  */
-ExecutionManager.prototype.setup = function (executionArray) {
+ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
     //internal recursive function to count how many modules are currently used
     function countModules(composable) {
         if (typeof composable.composables === 'undefined') {
@@ -64,7 +67,7 @@ ExecutionManager.prototype.setup = function (executionArray) {
             return count;
         }
     }
-
+   
     var needsLoading = [];
     this.composables = {};
     this.isReady = false;
@@ -74,16 +77,21 @@ ExecutionManager.prototype.setup = function (executionArray) {
     if (!Array.isArray(executionArray)) {
         executionArray = [executionArray];
     }
-
+    var names = [];
     //for each composable, that will be executed
     for (var i = 0; i < executionArray.length; i++) {
         var composable = executionArray[i];
         //if composable is provided as string, i.e. name it needs to be loaded
         if (typeof composable === 'string') {
+            names.push(composable);
             needsLoading.push(sweva.ComposableLoader.load(composable, this.composables, composable));
         }
             //otherwise a composable object is given
         else {
+            if (typeof isPureObject === 'undefined' || !isPureObject) {
+                composable = sweva.ComposableLoader.convertToObject(composable, 'JSON');
+            }
+            
             if (composable.type == 'module') {
                 this.composables[composable.name] = new Module(composable);
                 sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
@@ -94,19 +102,22 @@ ExecutionManager.prototype.setup = function (executionArray) {
                 //composables of a composition need also to be loaded
                 needsLoading.push(this.composables[composable.name].loadComposables());
             }
+            names.push(composable.name);
         }
     }
     var self = this;
+    
     //now wait for everything to load
     Promise.all(needsLoading).then(function () {
+        //console.log(sweva.ComposableLoader.composables);
         //let's check, how many modules are used in total to have a rough estimate for progress tracking
         var moduleCount = 0;
         for (var i = 0; i < executionArray.length; i++) {
-            moduleCount += countModules(sweva.ComposableLoader.get(executionArray[i]));
+            moduleCount += countModules(sweva.ComposableLoader.get(names[i]));
         }
         self.modulesTotal = moduleCount;
         self.modulesDone = 0;
-
+       
         //composables should now contain everything
         self.isReady = true;
         console.log('all loaded');
@@ -161,6 +172,7 @@ ExecutionManager.prototype.execute = function (data, input) {
                 }
 
                 for (var key in composables) {
+                    
                     if (composables.hasOwnProperty(key)) {
                         if (onlyOneComposable) {
                             executions.push(composables[key].execute(data, input, '', key, self.progressUpdate.bind(self)));
@@ -188,7 +200,7 @@ ExecutionManager.prototype.execute = function (data, input) {
                 });
             }
         }
-
+        
         if (self.isReady) {
             func(self.composables, executions, resolve, reject)();
         }

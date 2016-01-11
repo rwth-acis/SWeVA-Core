@@ -1,6 +1,7 @@
 ﻿'use strict';
 
 var Composable = require('./composable.js');
+var Module = require('./module.js');
 var DefinitionError = require('../errors/definitionError.js');
 var ExecutionError = require('../errors/executionError.js');
 
@@ -104,12 +105,14 @@ function Composition(initializationObject) {
         if (input.hasOwnProperty(composableName)) {
             return input[composableName];
         }
+        return null;
     });
 
     this.initializeFunction(initializationObject, 'mapDataIn', 4, function (data, composableName, composables, libs) {
         if (data.hasOwnProperty(composableName)) {
             return data[composableName];
         }
+        return null;
     });
 
     this.initializeFunction(initializationObject, 'mapDataOut', 2, function (output, libs) {
@@ -148,7 +151,20 @@ Composition.prototype.loadComposables = function () {
                 //a reference to the composables dictionary of the composition is passed, so the
                 //string values (names) of the required compositions are later replaced with the comosition objects,
                 //which can then be used
-                promises.push(sweva.ComposableLoader.load(self.composables[key], self.composables, key));
+                if (typeof self.composables[key] === 'string') {
+                    promises.push(sweva.ComposableLoader.load(self.composables[key], self.composables, key));
+                }
+                else { //otherwise create from given object directly
+                    var type = self.composables[key].type;
+                    if(type=='module'){
+                        self.composables[key] = new Module(self.composables[key]);
+                    }
+                    else {
+                        self.composables[key] = new Composition(self.composables[key]);
+                    }
+                    
+                }
+                
             }
         }
         //invoke all promises and wait for them to finish
@@ -452,8 +468,6 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
             else {
                 return null;
             }
-        } else {
-            return null;
         }
 
         return schema;
@@ -661,7 +675,10 @@ Composition.prototype.analyzeLinkGraph = function () {
     this.dataOutNames = [];
 
     for (var i = 0; i < this.startingComposables.length; i++) {
-        this.dataInNames.push(this.startingComposables[i]);
+       
+        if (this.composables[this.startingComposables[i]].dataInNames.length>0) {
+            this.dataInNames.push(this.startingComposables[i]);
+        }        
     }
     for (var key in this.endingComposables) {
         if (this.endingComposables.hasOwnProperty(key)) {
@@ -728,15 +745,16 @@ Composition.prototype.composableQueueExecution = function (context) {
                     //if this was the last endingComposable, finish
                     if (allCleared) {
                         self.executeFinishedCallback();
-                    }
+                    }                    
                 }
                 //if composable provides data to other composables 
                 else {
-                    
-                    //for each composable adjacent to this composable
+                   
+                    //for each composable adjacent to this composable                    
                     for (var k = 0; k < self.links[composableName].length; k++) {
                         //cat the property mapping
                         var mapping = self.links[composableName][k].mapping;
+                        
                         //set parameters data pool according to the defined mapping
                         if (typeof mapping === 'undefined') { //no mapping
                             self.parameters[self.links[composableName][k].to] = output;
@@ -745,27 +763,56 @@ Composition.prototype.composableQueueExecution = function (context) {
                             if (mapping.trim().length == 0) {//empty string = no mapping
                                 self.parameters[self.links[composableName][k].to] = output;
                             }
-                            else {
+                            else {                                
                                 self.addParameter(self.links[composableName][k].to, mapping, output);
                             }
                         }
-                        else if (typeof mapping === 'object') { //output is an object, so map properties
+                        else if (typeof mapping === 'object') { //output is an object, so map properties        
+                            
                             //for each mapping
                             for (var key in mapping) {
                                 if (mapping.hasOwnProperty(key)) {
                                     //map the value of the output to the corresponding key
                                     if (mapping[key].trim().length == 0) {//empty mapping target
-                                        self.parameters[self.links[composableName][k].to] = output[key];
-                                    }
+                                        if (typeof output !== 'object' || (typeof output === 'object' && Array.isArray(output))) {
+                                            self.parameters[self.links[composableName][k].to] = output;
+                                        }
+                                        else {
+                                            self.parameters[self.links[composableName][k].to] = output[key];
+                                        }
+                                        
+                                    }  
                                     else {
-                                        self.addParameter(self.links[composableName][k].to, mapping[key], output[key]);
+                                        
+                                        if (typeof output !== 'object' || (Array.isArray(output))) {
+                                           
+                                            if (self.composables[self.links[composableName][k].to].dataInNames.length>1) {
+                                                self.addParameter(self.links[composableName][k].to, mapping[key], output);
+                                            }
+                                            else {
+                                                self.parameters[self.links[composableName][k].to] = output;
+                                            }
+                                            
+                                        }
+                                        else {
+                                            
+                                            if (self.composables[self.links[composableName][k].to].dataInNames.length > 1) {
+                                                self.addParameter(self.links[composableName][k].to, mapping[key], output[key]);
+                                            }
+                                            else {
+                                                self.parameters[self.links[composableName][k].to] = output[key];
+                                            }
+                                            
+                                        }
+                                        
                                     }
                                 }
                             }
                         }
-                        else {
+                        else {                           
                             //error, no idea what to do with output
                         }
+                        //console.log(composableName, JSON.stringify(self.parameters));
                     }
                 }
                 //recursive execution of the next composables, as this one just finished and probably resolved some data dependencies

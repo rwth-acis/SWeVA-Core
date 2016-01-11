@@ -1,7 +1,7 @@
 ﻿//global object initialization
-var globalObject = null;
+var globalObject = window;
 
-
+/*
 try {
     if (window) {
         globalObject = window;
@@ -9,7 +9,7 @@ try {
 }
 catch (e) {
     globalObject = global;
-}
+}*/
 
 globalObject.sweva = {};
 
@@ -39,6 +39,3 @@ globalObject.sweva.settings = {
     enableSandboxing: true
 }
 
-function asd() {
-    return "hi";
-}

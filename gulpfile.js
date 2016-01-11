@@ -153,7 +153,11 @@ gulp.task('serve', [], function () {
         // https: true,
         server: {
             baseDir: ['.tmp', 'app'],
-            middleware: [historyApiFallback()],
+            middleware: [historyApiFallback(),
+                function (req, res, next) {
+                    res.setHeader('Access-Control-Allow-Origin', '*');
+                    next();
+                }],
             routes: {
                 '/bower_components': 'bower_components'
             }

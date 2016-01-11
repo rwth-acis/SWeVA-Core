@@ -3,7 +3,7 @@
 
 var now = Date.now();
 var manager = new sweva.ExecutionManager();
-manager.setup('composition1');
+manager.setup('composition3');
 manager.onProgress(function (progress) {
     //console.log(progress);
 });
@@ -32,3 +32,4 @@ manager.execute({
     console.log(result);
     
 });
+

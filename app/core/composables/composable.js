@@ -49,8 +49,8 @@ Composable.prototype.initialize = function (initializationObject) {
     this.initializeProperty(initializationObject, 'dataOutSchema', null);
     this.initializeProperty(initializationObject, 'inputSchema', null);
 
-    this.initializeProperty(initializationObject, 'dataInNames', ['data']);
-    this.initializeProperty(initializationObject, 'dataOutNames', ['result']);
+    this.initializeProperty(initializationObject, 'dataInNames', []);
+    this.initializeProperty(initializationObject, 'dataOutNames', []);
     this.initializeProperty(initializationObject, 'inputNames', []);
 
     /**
@@ -92,6 +92,19 @@ Composable.prototype.initialize = function (initializationObject) {
 Composable.prototype.initializeProperty = function (initializationObject,
     property, defaultValue) {
     if (initializationObject.hasOwnProperty(property)) {
+        var obj = initializationObject[property];
+        if (typeof obj === 'object') {
+            if (Array.isArray(obj)) {
+                if (obj.length == 0) {
+                    this[property] = defaultValue;
+                    return;
+                }
+            }
+            else if (Object.keys(obj).length == 0){
+                this[property] = defaultValue;
+                return;
+            }
+        }
         this[property] = initializationObject[property];
     } else {
         this[property] = defaultValue;
@@ -191,7 +204,7 @@ Composable.prototype.validateTypes = function (type, obj) {
     var typeSchema = this[type + 'Schema'];
 
     //when only one name is specified, the whole data object is taken, i.e. in this case the object is 
-    //automatically valid
+    //automatically valid    
     if (typeNames.length > 1) {
         for (var i = 0; i < typeNames.length; i++) {
             //if object has no such property, add it to the missing array
