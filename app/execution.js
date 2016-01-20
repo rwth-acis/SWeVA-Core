@@ -10,22 +10,16 @@ manager.onProgress(function (progress) {
 
 
 manager.execute({
-    adder1: {
-        sum1: 10,
-        sum2: 50
-    },
-    adder2: {
-        sum1: 5,
-        sum2: 15
-    },
-    clone1: {
-        sum1: 20,
-        sum2: 10
-    }
+    
 },
     {
-        offset: 0,
-        invert: 0
+        "Provider": {},
+        "RangeFilter": {},
+       
+        "view": {
+            "lines": true
+        }
+        
     })
 .then(function (result) {
     console.log('time ' + (Date.now() - now) + 'ms');

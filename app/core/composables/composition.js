@@ -754,7 +754,7 @@ Composition.prototype.composableQueueExecution = function (context) {
                     for (var k = 0; k < self.links[composableName].length; k++) {
                         //cat the property mapping
                         var mapping = self.links[composableName][k].mapping;
-                        
+                       
                         //set parameters data pool according to the defined mapping
                         if (typeof mapping === 'undefined') { //no mapping
                             self.parameters[self.links[composableName][k].to] = output;
@@ -816,6 +816,7 @@ Composition.prototype.composableQueueExecution = function (context) {
                     }
                 }
                 //recursive execution of the next composables, as this one just finished and probably resolved some data dependencies
+                //console.log(self.parameters)
                 self.composableQueueExecution.apply(self, [context]);
             }
         };

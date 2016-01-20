@@ -51,6 +51,7 @@ ExecutionManager.prototype.onProgress = function (callback) {
  * @param {boolean} [isPureObject=false] - Set this to true, if passing pure JavaScript Objects and not just JSON.
  */
 ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
+   
     //internal recursive function to count how many modules are currently used
     function countModules(composable) {
         if (typeof composable.composables === 'undefined') {
@@ -160,11 +161,12 @@ ExecutionManager.prototype.progressUpdate = function (alias, name, context) {
 ExecutionManager.prototype.execute = function (data, input) {
     var executions = [];
     var self = this;
-
+   
     return new Promise(function (resolve, reject) {
         //closure function
         var func = function (composables, executions, resolve, reject) {
             return function () {
+                
                 var onlyOneComposable = false;
                 //check if only one composable will be executed
                 if (Object.keys(composables).length == 1) {
@@ -182,9 +184,9 @@ ExecutionManager.prototype.execute = function (data, input) {
                         }
                     }
                 }
-
-                Promise.all(executions).then(function (results) {
-                    if (onlyOneComposable) {
+                
+                Promise.all(executions).then(function (results) {                    
+                    if (onlyOneComposable) {                        
                         return resolve(results[0]);
                     }
                     resolve(results);

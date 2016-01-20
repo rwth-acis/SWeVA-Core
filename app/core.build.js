@@ -1047,7 +1047,7 @@ Composition.prototype.composableQueueExecution = function (context) {
                     for (var k = 0; k < self.links[composableName].length; k++) {
                         //cat the property mapping
                         var mapping = self.links[composableName][k].mapping;
-                        
+                       
                         //set parameters data pool according to the defined mapping
                         if (typeof mapping === 'undefined') { //no mapping
                             self.parameters[self.links[composableName][k].to] = output;
@@ -1109,6 +1109,7 @@ Composition.prototype.composableQueueExecution = function (context) {
                     }
                 }
                 //recursive execution of the next composables, as this one just finished and probably resolved some data dependencies
+                //console.log(self.parameters)
                 self.composableQueueExecution.apply(self, [context]);
             }
         };
@@ -2069,6 +2070,7 @@ ExecutionManager.prototype.onProgress = function (callback) {
  * @param {boolean} [isPureObject=false] - Set this to true, if passing pure JavaScript Objects and not just JSON.
  */
 ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
+   
     //internal recursive function to count how many modules are currently used
     function countModules(composable) {
         if (typeof composable.composables === 'undefined') {
@@ -2178,11 +2180,12 @@ ExecutionManager.prototype.progressUpdate = function (alias, name, context) {
 ExecutionManager.prototype.execute = function (data, input) {
     var executions = [];
     var self = this;
-
+   
     return new Promise(function (resolve, reject) {
         //closure function
         var func = function (composables, executions, resolve, reject) {
             return function () {
+                
                 var onlyOneComposable = false;
                 //check if only one composable will be executed
                 if (Object.keys(composables).length == 1) {
@@ -2200,9 +2203,9 @@ ExecutionManager.prototype.execute = function (data, input) {
                         }
                     }
                 }
-
-                Promise.all(executions).then(function (results) {
-                    if (onlyOneComposable) {
+                
+                Promise.all(executions).then(function (results) {                    
+                    if (onlyOneComposable) {                        
                         return resolve(results[0]);
                     }
                     resolve(results);
