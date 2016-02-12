@@ -94,7 +94,7 @@ SwevaError.prototype.toString = function () {
         faultyObject = this.faultyObject.toString();
     }
     //construct string
-    return '[' + this.getTime() + '] ' + this.name + ' in ' + this.context + ': ' + this.message + '\n'
+    return '[' + this.getTime() + '] SwevaError ' + this.name + ' in ' + this.context + ': ' + this.message + '\n'
         + faultyObject;
 }
 module.exports = SwevaError;

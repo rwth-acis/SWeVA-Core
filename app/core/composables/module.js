@@ -97,7 +97,11 @@ function Module(initializationObject) {
     this.initializeFunction(initializationObject, 'requestError', 3, null);
 
     this.initializeFunction(initializationObject, 'response', 3,
-        function (response, input, libs) { return response.data });
+        function (response, input, libs) {           
+            var obj = {};
+            obj[this.dataOutNames[0]] = response.data;
+            return obj;
+        });
 
     this.initializeFunction(initializationObject, 'compute', 3, null);
 }

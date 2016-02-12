@@ -712,6 +712,7 @@ Composition.prototype.composableQueueExecution = function (context) {
             //fill data and input for next composable call
             data = this.parameters[composableName];
             input = this.mapInput(this.input, composableName, this.composables, sweva.libs);
+            
         }
         else {
             continue;
@@ -786,22 +787,26 @@ Composition.prototype.composableQueueExecution = function (context) {
                                         
                                         if (typeof output !== 'object' || (Array.isArray(output))) {
                                            
-                                            if (self.composables[self.links[composableName][k].to].dataInNames.length>1) {
-                                                self.addParameter(self.links[composableName][k].to, mapping[key], output);
+
+                                            self.addParameter(self.links[composableName][k].to, mapping[key], output);
+                                            /*if (self.composables[self.links[composableName][k].to].dataInNames.length>1) {
+                                                
                                             }
                                             else {
                                                 self.parameters[self.links[composableName][k].to] = output;
-                                            }
+                                            }*/
                                             
                                         }
                                         else {
                                             
-                                            if (self.composables[self.links[composableName][k].to].dataInNames.length > 1) {
-                                                self.addParameter(self.links[composableName][k].to, mapping[key], output[key]);
+                                            
+                                            self.addParameter(self.links[composableName][k].to, mapping[key], output[key]);
+                                            /*if (self.composables[self.links[composableName][k].to].dataInNames.length > 1) {
+                                                
                                             }
                                             else {
                                                 self.parameters[self.links[composableName][k].to] = output[key];
-                                            }
+                                            }*/
                                             
                                         }
                                         

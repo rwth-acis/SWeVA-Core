@@ -74,7 +74,7 @@ ComposableLoader.prototype.add = function (name, composable) {
  */
 ComposableLoader.prototype.convertToObject = function (json, context) {
     var result = json;
-   
+    var self = this;
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
             //reconstruct functions from string
@@ -87,7 +87,7 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                         function (error) {
                             sweva.ErrorManager.error(
                               new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
-                              context, json));
+                              context, self.convertJsonToCode(json)));
                         });
                 }
             }

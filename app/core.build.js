@@ -1005,6 +1005,7 @@ Composition.prototype.composableQueueExecution = function (context) {
             //fill data and input for next composable call
             data = this.parameters[composableName];
             input = this.mapInput(this.input, composableName, this.composables, sweva.libs);
+            
         }
         else {
             continue;
@@ -1079,22 +1080,26 @@ Composition.prototype.composableQueueExecution = function (context) {
                                         
                                         if (typeof output !== 'object' || (Array.isArray(output))) {
                                            
-                                            if (self.composables[self.links[composableName][k].to].dataInNames.length>1) {
-                                                self.addParameter(self.links[composableName][k].to, mapping[key], output);
+
+                                            self.addParameter(self.links[composableName][k].to, mapping[key], output);
+                                            /*if (self.composables[self.links[composableName][k].to].dataInNames.length>1) {
+                                                
                                             }
                                             else {
                                                 self.parameters[self.links[composableName][k].to] = output;
-                                            }
+                                            }*/
                                             
                                         }
                                         else {
                                             
-                                            if (self.composables[self.links[composableName][k].to].dataInNames.length > 1) {
-                                                self.addParameter(self.links[composableName][k].to, mapping[key], output[key]);
+                                            
+                                            self.addParameter(self.links[composableName][k].to, mapping[key], output[key]);
+                                            /*if (self.composables[self.links[composableName][k].to].dataInNames.length > 1) {
+                                                
                                             }
                                             else {
                                                 self.parameters[self.links[composableName][k].to] = output[key];
-                                            }
+                                            }*/
                                             
                                         }
                                         
@@ -1300,7 +1305,11 @@ function Module(initializationObject) {
     this.initializeFunction(initializationObject, 'requestError', 3, null);
 
     this.initializeFunction(initializationObject, 'response', 3,
-        function (response, input, libs) { return response.data });
+        function (response, input, libs) {           
+            var obj = {};
+            obj[this.dataOutNames[0]] = response.data;
+            return obj;
+        });
 
     this.initializeFunction(initializationObject, 'compute', 3, null);
 }
@@ -1582,7 +1591,7 @@ SwevaError.prototype.toString = function () {
         faultyObject = this.faultyObject.toString();
     }
     //construct string
-    return '[' + this.getTime() + '] ' + this.name + ' in ' + this.context + ': ' + this.message + '\n'
+    return '[' + this.getTime() + '] SwevaError ' + this.name + ' in ' + this.context + ': ' + this.message + '\n'
         + faultyObject;
 }
 module.exports = SwevaError;
@@ -1663,7 +1672,7 @@ ComposableLoader.prototype.add = function (name, composable) {
  */
 ComposableLoader.prototype.convertToObject = function (json, context) {
     var result = json;
-   
+    var self = this;
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
             //reconstruct functions from string
@@ -1676,7 +1685,7 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                         function (error) {
                             sweva.ErrorManager.error(
                               new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
-                              context, json));
+                              context, self.convertJsonToCode(json)));
                         });
                 }
             }
