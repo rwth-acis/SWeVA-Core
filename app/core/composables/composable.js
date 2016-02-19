@@ -197,38 +197,17 @@ Composable.prototype.getNewContext = function (context, alias) {
  * @returns {boolean} - True, if the object is compatible to this composable regarding the given type.
  */
 Composable.prototype.validateTypes = function (type, obj) {
-
-    //collect all propperties, that are missing from the object
-    var missingProperties = [];
     var typeNames = this[type + 'Names'];
     var typeSchema = this[type + 'Schema'];
-
-    //when only one name is specified, the whole data object is taken, i.e. in this case the object is 
-    //automatically valid    
-    if (typeNames.length > 1) {
-        for (var i = 0; i < typeNames.length; i++) {
-            //if object has no such property, add it to the missing array
-            if (!obj.hasOwnProperty(typeNames[i])) {
-                missingProperties.push(typeNames[i]);
-            }
-        }
-    }
-    //if any properties are missing, throw an error
-    if (missingProperties.length > 0) {
-        sweva.ErrorManager.error(new ExecutionError('Some required properties specified in ' + (type + 'Names') + ' are missing from the object: ' + missingProperties.toString(),
-                       this.context, obj));
-        return false;
-    }
-    else {
-        //if properties are all present and a schema is provided, we can perform a more detailed check
-        if (typeSchema !== null) {
-            //use the validator library on the object
-            var valid = sweva.Ajv.validate(typeSchema, obj);
-            if (!valid) {
-                sweva.ErrorManager.error(new ExecutionError('Object does not match the given ' + type + 'Schema: ' + sweva.Ajv.errorsText(sweva.Ajv.errors),
-                       this.context, obj));
-                return false;
-            }
+    
+    //if properties are all present and a schema is provided, we can perform a more detailed check
+    if (typeSchema !== null) {
+        //use the validator library on the object
+        var valid = sweva.Ajv.validate(typeSchema, obj);
+        if (!valid) {
+            sweva.ErrorManager.error(new ExecutionError('Object does not match the given ' + type + 'Schema: ' + sweva.Ajv.errorsText(sweva.Ajv.errors),
+                    this.context, obj));
+            return false;
         }
     }
 

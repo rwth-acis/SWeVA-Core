@@ -31,7 +31,8 @@ globalObject.sweva.SwevaScript = new SwevaScript();
 
 globalObject.sweva.libs = {
     axios: globalObject.sweva.axios,
-    get: globalObject.sweva.SwevaScript.get
+    get: globalObject.sweva.SwevaScript.get,
+    set: globalObject.sweva.SwevaScript.set
 }
 
 //settings

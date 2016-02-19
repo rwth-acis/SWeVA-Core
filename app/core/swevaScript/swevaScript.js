@@ -146,6 +146,50 @@ SwevaScript.prototype.get = function (object, property) {
     console.error('Illegal property name: ' + property);
     return null;
 }
+
+SwevaScript.prototype.set = function (object, property, value) {
+    var forbiddenList = {
+        arguments: true,
+        callee: true,
+        caller: true,
+        constructor: true,
+        eval: true,
+        prototype: true,
+        stack: true,
+        unwatch: true,
+        valueOf: true,
+        watch: true,
+
+        __proto__: true,
+        __parent__: true,
+        'this': true,
+        window: true,
+        document: true,
+        '[': true,
+        ']': true,
+        Function: true,
+        'with': true,
+        uneval: true,
+        toSource: true,
+        setTimeout: true,
+        setInterval: true
+    }
+    //if a string is provided, check for being in the blacklist
+    if (typeof property === 'string') {
+        if (!object.window && !forbiddenList.hasOwnProperty(property)) {
+            object[property] = value;
+        }
+        else {
+            console.error('Illegal property name: ' + property);
+        }
+    }
+    //numbers are not checked for being in the blacklist
+    else if (typeof property === 'number') {
+        object[property] = value;
+    }
+}
+
+
 /**
  * Sanitizes given Javascript code by verifying if it is a safer subset of JavaScript and masking global variables.
  * {@link SwevaScript#verify} is performed internally, so you do not need to verify explicitly beforehand.

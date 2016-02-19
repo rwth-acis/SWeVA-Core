@@ -32,7 +32,8 @@ globalObject.sweva.SwevaScript = new SwevaScript();
 
 globalObject.sweva.libs = {
     axios: globalObject.sweva.axios,
-    get: globalObject.sweva.SwevaScript.get
+    get: globalObject.sweva.SwevaScript.get,
+    set: globalObject.sweva.SwevaScript.set
 }
 
 //settings
@@ -241,38 +242,17 @@ Composable.prototype.getNewContext = function (context, alias) {
  * @returns {boolean} - True, if the object is compatible to this composable regarding the given type.
  */
 Composable.prototype.validateTypes = function (type, obj) {
-
-    //collect all propperties, that are missing from the object
-    var missingProperties = [];
     var typeNames = this[type + 'Names'];
     var typeSchema = this[type + 'Schema'];
-
-    //when only one name is specified, the whole data object is taken, i.e. in this case the object is 
-    //automatically valid    
-    if (typeNames.length > 1) {
-        for (var i = 0; i < typeNames.length; i++) {
-            //if object has no such property, add it to the missing array
-            if (!obj.hasOwnProperty(typeNames[i])) {
-                missingProperties.push(typeNames[i]);
-            }
-        }
-    }
-    //if any properties are missing, throw an error
-    if (missingProperties.length > 0) {
-        sweva.ErrorManager.error(new ExecutionError('Some required properties specified in ' + (type + 'Names') + ' are missing from the object: ' + missingProperties.toString(),
-                       this.context, obj));
-        return false;
-    }
-    else {
-        //if properties are all present and a schema is provided, we can perform a more detailed check
-        if (typeSchema !== null) {
-            //use the validator library on the object
-            var valid = sweva.Ajv.validate(typeSchema, obj);
-            if (!valid) {
-                sweva.ErrorManager.error(new ExecutionError('Object does not match the given ' + type + 'Schema: ' + sweva.Ajv.errorsText(sweva.Ajv.errors),
-                       this.context, obj));
-                return false;
-            }
+    
+    //if properties are all present and a schema is provided, we can perform a more detailed check
+    if (typeSchema !== null) {
+        //use the validator library on the object
+        var valid = sweva.Ajv.validate(typeSchema, obj);
+        if (!valid) {
+            sweva.ErrorManager.error(new ExecutionError('Object does not match the given ' + type + 'Schema: ' + sweva.Ajv.errorsText(sweva.Ajv.errors),
+                    this.context, obj));
+            return false;
         }
     }
 
@@ -501,22 +481,32 @@ Composition.prototype.loadComposables = function () {
  */
 Composition.prototype.hasParameters = function (composableName) {
     //how many parameters does the composable need?
-   
-    var parametersNeeded = this.composables[composableName].dataIn;
-
+    
+    var parametersNeeded = [];
+    if(typeof this.composables[composableName].dataInConnected !== 'undefined') {
+        parametersNeeded = Object.keys(this.composables[composableName].dataInConnected);
+    }
+    
+    
     //if it does not need any, we are good here
-    if (parametersNeeded == 0) {
+    if (parametersNeeded.length == 0) {
         return true;
     }
-
+    
     //if we are still here, it needs at least one
     if (this.parameters.hasOwnProperty(composableName)) {
-        //if it only needs one, it's ok (we have some value defined, if the key is present)
-        if (parametersNeeded == 1) {
-            return true;
+       
+        
+        //not enough
+        for (var i = 0; i < parametersNeeded.length; i++) {
+            var parameter = parametersNeeded[i];
+            
+            if (typeof this.parameters[composableName][parameter] === 'undefined') {
+                return false;
+            }
         }
-        //compare available parameter count with needed parameters
-        return Object.keys(this.parameters[composableName]).length == parametersNeeded;
+        return true;
+        
     }
     return false;
 }
@@ -535,8 +525,7 @@ Composition.prototype.hasParameters = function (composableName) {
 Composition.prototype.addParameter = function (composableName, property, value) {
     //if no key for composable present, create one
     if (!this.parameters.hasOwnProperty(composableName)) {
-        this.parameters[composableName] = {
-        };
+        this.parameters[composableName] = {};
     }
 
     this.parameters[composableName][property] = value;
@@ -579,12 +568,26 @@ Composition.prototype.hasCycles = function (startingNodeArray) {
         }
     }
     //create a copy of the links without mapping information (edges)
-    for (var key in this.links) {
-        if (this.links.hasOwnProperty(key)) {
-            edges[key] = [];
-            for (var i = 0; i < this.links[key].length; i++) {
-                edges[key].push(this.links[key][i].to);
+    for (var fromNode in this.links) {
+        if (this.links.hasOwnProperty(fromNode)) {
+            edges[fromNode] = [];
+
+            for (var fromEndpoint in this.links[fromNode]) {
+                if (this.links[fromNode].hasOwnProperty(fromEndpoint)) {
+                    
+                    for (var toNode in this.links[fromNode][fromEndpoint]) {
+                        if (this.links[fromNode][fromEndpoint].hasOwnProperty(toNode)) {
+
+                            edges[fromNode].push(toNode);
+
+                        }
+                    }
+
+                }
             }
+            /*for (var i = 0; i < this.links[key].length; i++) {
+                edges[key].push(this.links[key][i].to);
+            }*/
         }
     }
 
@@ -860,96 +863,77 @@ Composition.prototype.analyzeLinkGraph = function () {
 
     //find startingComposables that have no ingoing edges
     //find endingComposables that have no outgoing edges
-    for (var key in this.links) {
-        if (this.links.hasOwnProperty(key)) {
-            for (var i = 0; i < this.links[key].length; i++) {
-                var prop = this.links[key][i].to;
-                var mapping = this.links[key][i].mapping;
-                
-                //check if linking to existing composable!
-                if (!this.composables.hasOwnProperty(prop)) {
-                    sweva.ErrorManager.error(
-                      new DefinitionError('Composable "' + key + '" links to undefined composable "' + prop + '"!',
-                      this.context, Object.keys(this.composables)));
-                    this.invalidLinkGraph = true;
-                }
-                else {
-                    //no mapping => dataOutA -> dataInB
-                    if (typeof mapping === 'undefined') { 
-                        //check for schema compatibility
+   
 
-                        var compatibleSchemas = this.checkSchemaCompatibility(key, prop, this.composables[key].dataOutSchema, this.composables[prop].dataInSchema);
-                        if (!compatibleSchemas) {
-                            this.invalidLinkGraph = true;
-                        }
-                    }
-                    //map the whole output to a property listed in dataInNames of the target
-                    else if (typeof mapping === 'string') {
-                        var toComposable = this.composables[prop];
-                        
-                        //do we map to an existing/expected property?
-                        if (toComposable.dataInNames.indexOf(mapping) < 0) {
-                            sweva.ErrorManager.error(
-                                 new DefinitionError('Composable "' + key + '" links to undefined dataIn "' + mapping + '" of composable "' + prop + '"!',
-                                 this.context, toComposable.dataInNames));
-                            this.invalidLinkGraph = true;
-                        }
-                        //additionally check for schema compatibility (optional)
-                        else if (this.composables[key].dataOutSchema && this.composables[prop].dataInSchema != null) {//schemas are optional, so only check if available
-                            var compatibleSchemas = this.checkSchemaCompatibility(key, prop, this.composables[key].dataOutSchema, this.composables[prop].dataInSchema, null, mapping);
-                            if (!compatibleSchemas) {
+    for (var fromNode in this.links) {
+        if (this.links.hasOwnProperty(fromNode)) {
+           
+
+            for (var fromEndpoint in this.links[fromNode]) {
+                if (this.links[fromNode].hasOwnProperty(fromEndpoint)) {
+
+                    for (var toNode in this.links[fromNode][fromEndpoint]) {
+                        if (this.links[fromNode][fromEndpoint].hasOwnProperty(toNode)) {
+                            var toEndpoint = this.links[fromNode][fromEndpoint][toNode];
+                            //check if linking to existing composable!
+                            if (!this.composables.hasOwnProperty(toNode)) {
+                                sweva.ErrorManager.error(
+                                  new DefinitionError('Composable "' + fromNode + '" links to undefined composable "' + toNode + '"!',
+                                  this.context, Object.keys(this.composables)));
                                 this.invalidLinkGraph = true;
                             }
-                        }
-                    }
-                    else { //if a dictionary is used for the mapping
-                        //check if each key is in dataOutNames and each value in dataInNames, i.e. map existing properties to each other
-                        for (var mapKey in mapping) {
-                            if (mapping.hasOwnProperty(mapKey)) {
+                            else {    
                                 //composable has no such dataOut, it tries to map to another composable
-                                if (this.composables[key].dataOutNames.indexOf(mapKey) < 0) { 
+                                if (this.composables[fromNode].dataOutNames.indexOf(fromEndpoint) < 0) {
                                     sweva.ErrorManager.error(
-                                         new DefinitionError('Composable "' + key + '" maps undefined dataIn "' + mapKey + '" to composable "' + prop + '"!',
-                                         this.context, this.composables[key].dataOutNames));
+                                         new DefinitionError('Composable "' + fromNode + '" maps undefined dataOut "' + fromEndpoint + '" to composable "' + toNode + '"!',
+                                         this.context, this.composables[fromNode].dataOutNames));
                                     this.invalidLinkGraph = true;
                                     break;
                                 }
 
                                 //composable has no such dataIn
-                                if (this.composables[prop].dataInNames.indexOf(mapping[mapKey]) < 0) { 
+                                if (this.composables[toNode].dataInNames.indexOf(toEndpoint) < 0) {
                                     sweva.ErrorManager.error(
-                                         new DefinitionError('Composable "' + key + '" links to undefined dataIn "' + mapping + '" of composable "' + prop + '"!',
-                                         this.context, this.composables[prop].dataInNames));
+                                         new DefinitionError('Composable "' + fromNode + '" links to undefined dataIn "' + toEndpoint + '" of composable "' + toNode + '"!',
+                                         this.context, this.composables[toNode].dataInNames));
                                     this.invalidLinkGraph = true;
                                     break;
                                 }
                                 //additionally check for schema compatibility (optional)
-                                if (this.composables[key].dataOutSchema && this.composables[prop].dataInSchema != null) {//schemas are optional, so only check if available
-                                    var compatibleSchemas = this.checkSchemaCompatibility(key, prop, this.composables[key].dataOutSchema, this.composables[prop].dataInSchema, mapKey, mapping[mapKey]);
+                                if (this.composables[fromNode].dataOutSchema && this.composables[toNode].dataInSchema != null) {//schemas are optional, so only check if available
+                                    var compatibleSchemas = this.checkSchemaCompatibility(fromNode, toNode, this.composables[fromNode].dataOutSchema, this.composables[toNode].dataInSchema,fromEndpoint, toEndpoint);
                                     if (!compatibleSchemas) {
                                         this.invalidLinkGraph = true;
                                         break;
                                     }
                                 }
+                                if (typeof this.composables[toNode].dataInConnected === 'undefined') {
+                                    this.composables[toNode].dataInConnected = {};
+                                }
+                                this.composables[toNode].dataInConnected[toEndpoint] = true;
 
                             }
+                            //if one composable A points to composable B, then B cannot be startingComposable
+                            var propIndex = this.startingComposables.indexOf(toNode);
+                            if (propIndex >= 0) {
+                                this.startingComposables.splice(propIndex, 1);
+                            }
+                            //if one composable A points to composable B, then A cannot be endingComposable
+                            
+                            if (this.endingComposables.hasOwnProperty(fromNode)) {
+                                delete this.endingComposables[fromNode]
+                            }
+
                         }
                     }
                 }
-                
-                //if one composable A points to composable B, then B cannot be startingComposable
-                var propIndex = this.startingComposables.indexOf(prop);
-                if (propIndex >= 0) {
-                    this.startingComposables.splice(propIndex, 1);
-                }
-                //if one composable A points to composable B, then A cannot be endingComposable
-
-                if (this.endingComposables.hasOwnProperty(key)) {
-                    delete this.endingComposables[key]
-                }
-            }
+            }           
         }
     }
+
+
+    
 
     //check for cycles
     var hasCycles = this.hasCycles(this.startingComposables);
@@ -986,6 +970,7 @@ Composition.prototype.analyzeLinkGraph = function () {
  * @protected
  */
 Composition.prototype.composableQueueExecution = function (context) {
+    
     //keep an array of all composables
     //executed composables get marked
     for (var i = 0; i < this.unlcearedComposables.length; i++) {
@@ -996,14 +981,19 @@ Composition.prototype.composableQueueExecution = function (context) {
         }
         
         var composableName = this.unlcearedComposables[i].composable;
+
+        
+       
         var data = null;
         var input = null;
         
         //check if composable has all data it depends on available
         
         if (this.hasParameters(composableName)) {
+            
             //fill data and input for next composable call
             data = this.parameters[composableName];
+           
             input = this.mapInput(this.input, composableName, this.composables, sweva.libs);
             
         }
@@ -1013,13 +1003,14 @@ Composition.prototype.composableQueueExecution = function (context) {
 
         //not continued = composableName can be executed (has data vailable)
         var self = this;
-
-        //closue function, to get the current composable for each function
+       
+        //closure function, to get the current composable for each function
         var func = function (composableName) {
             return function (output) {
                 
                 //check if composable does not provide data to other composables (end of execution chain)
                 if (self.endingComposables.hasOwnProperty(composableName)) {
+                    
                     var allCleared = true;
                     //if we have only one output composable, we do not need a named property,
                     //otherwise create a property using the ending-composable alias
@@ -1044,74 +1035,24 @@ Composition.prototype.composableQueueExecution = function (context) {
                 //if composable provides data to other composables 
                 else {
                    
-                    //for each composable adjacent to this composable                    
-                    for (var k = 0; k < self.links[composableName].length; k++) {
-                        //cat the property mapping
-                        var mapping = self.links[composableName][k].mapping;
-                       
-                        //set parameters data pool according to the defined mapping
-                        if (typeof mapping === 'undefined') { //no mapping
-                            self.parameters[self.links[composableName][k].to] = output;
-                        }
-                        else if (typeof mapping === 'string') { //map whole output (i.e. no sub-parts of output present)
-                            if (mapping.trim().length == 0) {//empty string = no mapping
-                                self.parameters[self.links[composableName][k].to] = output;
-                            }
-                            else {                                
-                                self.addParameter(self.links[composableName][k].to, mapping, output);
-                            }
-                        }
-                        else if (typeof mapping === 'object') { //output is an object, so map properties        
-                            
-                            //for each mapping
-                            for (var key in mapping) {
-                                if (mapping.hasOwnProperty(key)) {
-                                    //map the value of the output to the corresponding key
-                                    if (mapping[key].trim().length == 0) {//empty mapping target
-                                        if (typeof output !== 'object' || (typeof output === 'object' && Array.isArray(output))) {
-                                            self.parameters[self.links[composableName][k].to] = output;
-                                        }
-                                        else {
-                                            self.parameters[self.links[composableName][k].to] = output[key];
-                                        }
-                                        
-                                    }  
-                                    else {
-                                        
-                                        if (typeof output !== 'object' || (Array.isArray(output))) {
-                                           
+                    
+                    if (self.links[composableName]) {
 
-                                            self.addParameter(self.links[composableName][k].to, mapping[key], output);
-                                            /*if (self.composables[self.links[composableName][k].to].dataInNames.length>1) {
-                                                
-                                            }
-                                            else {
-                                                self.parameters[self.links[composableName][k].to] = output;
-                                            }*/
-                                            
-                                        }
-                                        else {
-                                            
-                                            
-                                            self.addParameter(self.links[composableName][k].to, mapping[key], output[key]);
-                                            /*if (self.composables[self.links[composableName][k].to].dataInNames.length > 1) {
-                                                
-                                            }
-                                            else {
-                                                self.parameters[self.links[composableName][k].to] = output[key];
-                                            }*/
-                                            
-                                        }
-                                        
+                        for (var fromEndpoint in self.links[composableName]) {
+                            if (self.links[composableName].hasOwnProperty(fromEndpoint)) {
+
+                                for (var toNode in self.links[composableName][fromEndpoint]) {
+                                    if (self.links[composableName][fromEndpoint].hasOwnProperty(toNode)) {
+                                        var toEndpoint = self.links[composableName][fromEndpoint][toNode];
+                                            self.addParameter(toNode, toEndpoint, output[fromEndpoint]);                                            
                                     }
                                 }
                             }
-                        }
-                        else {                           
-                            //error, no idea what to do with output
-                        }
-                        //console.log(composableName, JSON.stringify(self.parameters));
+                        }                            
                     }
+                    
+                    
+                    
                 }
                 //recursive execution of the next composables, as this one just finished and probably resolved some data dependencies
                 //console.log(self.parameters)
@@ -1159,7 +1100,7 @@ Composition.prototype.execute = function (data, input, context, alias, progress)
             //each starting composable has an own data part
             //use user-definable {@link Composition~mapDataInFunction} to map the data to the starting composables
             for (var i = 0; i < self.startingComposables.length; i++) {
-                var composableName = self.startingComposables[i];              
+                var composableName = self.startingComposables[i];               
                 self.parameters[composableName] = self.mapDataIn(self.data, composableName, self.composables, sweva.libs);
             }
             
@@ -1699,7 +1640,7 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     return result;
 }
 ComposableLoader.prototype.getDefaultModule = function () {
-    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n      return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return response.data\n    }    \n}";
+    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n        return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return response.data\n    }    \n}";
 }
 ComposableLoader.prototype.getDefaultComposition = function () {
     return "{\n    type: \'composition\',\n    name: \'composition1\',\n    dataInNames: [],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: [],\n    inputSchema: {},\n    mapDataIn: function (data, composableName, composables, libs) {\n        if (data.hasOwnProperty(composableName)) {\n            return libs.get(data, composableName);\n        }\n        return null;\n    },\n    mapDataOut: function (output, libs) {\n        return output;\n    },\n    mapInput: function (input, moduleName, modules, libs) {\n        if (input.hasOwnProperty(moduleName)) {\n            return libs.get(input, moduleName);\n        }\n        return null;\n    }\n}";
@@ -2392,6 +2333,50 @@ SwevaScript.prototype.get = function (object, property) {
     console.error('Illegal property name: ' + property);
     return null;
 }
+
+SwevaScript.prototype.set = function (object, property, value) {
+    var forbiddenList = {
+        arguments: true,
+        callee: true,
+        caller: true,
+        constructor: true,
+        eval: true,
+        prototype: true,
+        stack: true,
+        unwatch: true,
+        valueOf: true,
+        watch: true,
+
+        __proto__: true,
+        __parent__: true,
+        'this': true,
+        window: true,
+        document: true,
+        '[': true,
+        ']': true,
+        Function: true,
+        'with': true,
+        uneval: true,
+        toSource: true,
+        setTimeout: true,
+        setInterval: true
+    }
+    //if a string is provided, check for being in the blacklist
+    if (typeof property === 'string') {
+        if (!object.window && !forbiddenList.hasOwnProperty(property)) {
+            object[property] = value;
+        }
+        else {
+            console.error('Illegal property name: ' + property);
+        }
+    }
+    //numbers are not checked for being in the blacklist
+    else if (typeof property === 'number') {
+        object[property] = value;
+    }
+}
+
+
 /**
  * Sanitizes given Javascript code by verifying if it is a safer subset of JavaScript and masking global variables.
  * {@link SwevaScript#verify} is performed internally, so you do not need to verify explicitly beforehand.
