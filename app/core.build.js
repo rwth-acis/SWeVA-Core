@@ -670,7 +670,7 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
         //iterate over the target keys (obj2Schema)
         for (var key in to) {
             //the source (obj1Schema) must have all keys the target has
-            if (!from.hasOwnProperty(key)) {
+            if (key !== 'items' && key !== 'required' && !from.hasOwnProperty(key)) {
                 error = {
                     level: level,
                     message: 'missing property "' + key + '"'
@@ -678,19 +678,19 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
                 return false;
             }
             //if we are dealing with an array, proceed to the meta-level
-            if (key === 'items') {
+            if (key === 'items' && from.hasOwnProperty(key)) {
                 if (!metaLevel(level + '.' + key, from[key], to[key])) {
                     return false;
                 }
             }
             //if properties are defined, proceed with the recursion using the propertyLevel
-            else if (key === 'properties') {
+            else if (key === 'properties' && from.hasOwnProperty(key)) {
                 if (!propertyLevel(level + '.' + key, from[key], to[key])) {
                     return false;
                 }
             }
             //if we get to the required array...
-            else if (key === 'required') {
+            else if (key === 'required' && from.hasOwnProperty(key)) {
                 //special: required array order should be ignored
                 from[key].sort();
                 to[key].sort();
@@ -719,7 +719,7 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
             //if we get something else, we compare the values
             //this should be all primitive types, but I'm not sure if I didn't miss any possible non-primitive
             //in the above if-else
-            else {
+            else if (from.hasOwnProperty(key)){
                 if (from[key] !== to[key]) {
                     error = {
                         level: level,
@@ -801,7 +801,8 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
         }
     }
 
-    //if we didn't have an error yet, we can start the recurion
+    //if we didn't have an error yet, we can start the recursion
+    
     if (!error) {
         result = metaLevel('', obj1Schema, obj2Schema);
     }
@@ -1270,9 +1271,8 @@ Module.prototype.callService = function (request, input) {
     var self = this;
    
     return new Promise(function (resolve, reject) {
-        
         request
-        .then(function (response) {
+        .then(function (response) {            
             resolve(self.response(response, input, sweva.libs));
         })
         .catch(function (response) {
@@ -1296,11 +1296,8 @@ Module.prototype.callService = function (request, input) {
  */
 Module.prototype.execute = function (data, input, context, alias, progress) {
     var self = this;
-    
     context = this.getNewContext(context, alias);
-   
-    
-    
+
     return new Promise(function (resolve, reject) {
 
         //only execute, if data and input objects are valid according to the optional schamas
@@ -1323,6 +1320,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
             else {
                 //call service using the HTTP request
                 self.callService(self.request(data, input, sweva.libs), input).then(function (output) {
+
                     //validate output
                     if (self.validateTypes('dataOut', output)) {
                         //report progress, if callback is defined
@@ -1622,7 +1620,8 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                 //check if string array starts with 'function' -> assemble function into object
                 if (str.trim().indexOf('function') == 0) {
                     //first sanitize the script to prevent malicious code execution
-                    json[key] = sweva.SwevaScript.sanitize(json[key].join(''),
+                    
+                    json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
                         function (error) {
                             sweva.ErrorManager.error(
                               new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
@@ -1640,14 +1639,16 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     return result;
 }
 ComposableLoader.prototype.getDefaultModule = function () {
-    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n        return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return response.data\n    }    \n}";
+    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n        return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return { result:response.data }\n    }    \n}";
 }
 ComposableLoader.prototype.getDefaultComposition = function () {
     return "{\n    type: \'composition\',\n    name: \'composition1\',\n    dataInNames: [],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: [],\n    inputSchema: {},\n    mapDataIn: function (data, composableName, composables, libs) {\n        if (data.hasOwnProperty(composableName)) {\n            return libs.get(data, composableName);\n        }\n        return null;\n    },\n    mapDataOut: function (output, libs) {\n        return output;\n    },\n    mapInput: function (input, moduleName, modules, libs) {\n        if (input.hasOwnProperty(moduleName)) {\n            return libs.get(input, moduleName);\n        }\n        return null;\n    }\n}";
 }
 ComposableLoader.prototype.convertCodeToJson = function (string) {
+    
     var result = ''
-    var lines = string.split(/\r?\n/)
+    var lines = string.split(/\r?\n/);
+   
     var regexFunction = new RegExp(/^\s*(\w)+\s*:\s*function/);
     var regexProperty = new RegExp(/^\s*(\w)+\s*/);
 
@@ -1656,8 +1657,7 @@ ComposableLoader.prototype.convertCodeToJson = function (string) {
     var braceCount = 0;
     var funcLinesJustFinished= false;
     for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-
+        var line = lines[i].trim();        
         if (!funcLines) {
             if (funcLinesJustFinished && line.indexOf(':') >= 0) {
                 funcLinesJustFinished = false;
@@ -1714,6 +1714,7 @@ ComposableLoader.prototype.convertCodeToJson = function (string) {
                 funcLinesFirst = false;
             }
             else {
+                line = line.replace('\\n', '\\\\n');
                 if (braceCount == 0) {
                     if (line.length > 0 && line.indexOf(',') >= line.length - 1) {
                         line = line.slice(0, line.length - 1);
@@ -1738,6 +1739,7 @@ ComposableLoader.prototype.convertCodeToJson = function (string) {
     if (result.indexOf('{') !== 0) {
         return '{' + result + '}';
     }
+
     return result;
 }
 ComposableLoader.prototype.convertJsonToCode = function (obj) {
@@ -1757,7 +1759,8 @@ ComposableLoader.prototype.convertJsonToCode = function (obj) {
 
         for (var i = 0; i < keys.length; i++) {
             var key = keys[i];
-            result += ident + key + ': ';
+            var keyString = (key.indexOf(' ') >= 0) ? ('\'' + key + '\'') : key;
+            result += ident + keyString + ': ';
             if (typeof object[key] === 'string') {
                 result += '\'' + object[key] + '\'';
             }
@@ -2386,9 +2389,8 @@ SwevaScript.prototype.set = function (object, property, value) {
  */
 SwevaScript.prototype.sanitize = function (code, errorCallback) {
     //all in one line
-    code = code.replace(/(\r\n|\n|\r)/gm, ""); 
-
-    
+    //code = code.replace(/(\r\n|\n|\r)/gm, ""); 
+   
     var error = '';
     //first make sure it is valid SwevaScript
     var validation = this.verify(code);    
@@ -2400,8 +2402,10 @@ SwevaScript.prototype.sanitize = function (code, errorCallback) {
         }).join(',');
         //we want to shadow all global variables except the ones we allow, by declaring them as local variables
         //https://stackoverflow.com/posts/26917938/revisions
-        var funcReg = /function *\(([^()]*)\)[ \n\t]*{(.*)}/gmi;
+        //var funcReg = /function *\(([^()]*)\)[ \n\t]*{(.*)}/gmi;
+        var funcReg = /function\s*\(([^()]*)\)\s\{((.|\n)*)\}/gmi;
         var match = funcReg.exec(code);
+       
         //we extract funtion header (decrlaration with parameters) and body
         if (match) {
             

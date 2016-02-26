@@ -397,7 +397,7 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
         //iterate over the target keys (obj2Schema)
         for (var key in to) {
             //the source (obj1Schema) must have all keys the target has
-            if (!from.hasOwnProperty(key)) {
+            if (key !== 'items' && key !== 'required' && !from.hasOwnProperty(key)) {
                 error = {
                     level: level,
                     message: 'missing property "' + key + '"'
@@ -405,19 +405,19 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
                 return false;
             }
             //if we are dealing with an array, proceed to the meta-level
-            if (key === 'items') {
+            if (key === 'items' && from.hasOwnProperty(key)) {
                 if (!metaLevel(level + '.' + key, from[key], to[key])) {
                     return false;
                 }
             }
             //if properties are defined, proceed with the recursion using the propertyLevel
-            else if (key === 'properties') {
+            else if (key === 'properties' && from.hasOwnProperty(key)) {
                 if (!propertyLevel(level + '.' + key, from[key], to[key])) {
                     return false;
                 }
             }
             //if we get to the required array...
-            else if (key === 'required') {
+            else if (key === 'required' && from.hasOwnProperty(key)) {
                 //special: required array order should be ignored
                 from[key].sort();
                 to[key].sort();
@@ -446,7 +446,7 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
             //if we get something else, we compare the values
             //this should be all primitive types, but I'm not sure if I didn't miss any possible non-primitive
             //in the above if-else
-            else {
+            else if (from.hasOwnProperty(key)){
                 if (from[key] !== to[key]) {
                     error = {
                         level: level,
@@ -528,7 +528,8 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
         }
     }
 
-    //if we didn't have an error yet, we can start the recurion
+    //if we didn't have an error yet, we can start the recursion
+    
     if (!error) {
         result = metaLevel('', obj1Schema, obj2Schema);
     }

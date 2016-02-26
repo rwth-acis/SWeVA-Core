@@ -83,7 +83,8 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                 //check if string array starts with 'function' -> assemble function into object
                 if (str.trim().indexOf('function') == 0) {
                     //first sanitize the script to prevent malicious code execution
-                    json[key] = sweva.SwevaScript.sanitize(json[key].join(''),
+                    
+                    json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
                         function (error) {
                             sweva.ErrorManager.error(
                               new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
@@ -101,14 +102,16 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     return result;
 }
 ComposableLoader.prototype.getDefaultModule = function () {
-    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n        return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return response.data\n    }    \n}";
+    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n        return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return { result:response.data }\n    }    \n}";
 }
 ComposableLoader.prototype.getDefaultComposition = function () {
     return "{\n    type: \'composition\',\n    name: \'composition1\',\n    dataInNames: [],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: [],\n    inputSchema: {},\n    mapDataIn: function (data, composableName, composables, libs) {\n        if (data.hasOwnProperty(composableName)) {\n            return libs.get(data, composableName);\n        }\n        return null;\n    },\n    mapDataOut: function (output, libs) {\n        return output;\n    },\n    mapInput: function (input, moduleName, modules, libs) {\n        if (input.hasOwnProperty(moduleName)) {\n            return libs.get(input, moduleName);\n        }\n        return null;\n    }\n}";
 }
 ComposableLoader.prototype.convertCodeToJson = function (string) {
+    
     var result = ''
-    var lines = string.split(/\r?\n/)
+    var lines = string.split(/\r?\n/);
+   
     var regexFunction = new RegExp(/^\s*(\w)+\s*:\s*function/);
     var regexProperty = new RegExp(/^\s*(\w)+\s*/);
 
@@ -117,8 +120,7 @@ ComposableLoader.prototype.convertCodeToJson = function (string) {
     var braceCount = 0;
     var funcLinesJustFinished= false;
     for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-
+        var line = lines[i].trim();        
         if (!funcLines) {
             if (funcLinesJustFinished && line.indexOf(':') >= 0) {
                 funcLinesJustFinished = false;
@@ -175,6 +177,7 @@ ComposableLoader.prototype.convertCodeToJson = function (string) {
                 funcLinesFirst = false;
             }
             else {
+                line = line.replace('\\n', '\\\\n');
                 if (braceCount == 0) {
                     if (line.length > 0 && line.indexOf(',') >= line.length - 1) {
                         line = line.slice(0, line.length - 1);
@@ -199,6 +202,7 @@ ComposableLoader.prototype.convertCodeToJson = function (string) {
     if (result.indexOf('{') !== 0) {
         return '{' + result + '}';
     }
+
     return result;
 }
 ComposableLoader.prototype.convertJsonToCode = function (obj) {
@@ -218,7 +222,8 @@ ComposableLoader.prototype.convertJsonToCode = function (obj) {
 
         for (var i = 0; i < keys.length; i++) {
             var key = keys[i];
-            result += ident + key + ': ';
+            var keyString = (key.indexOf(' ') >= 0) ? ('\'' + key + '\'') : key;
+            result += ident + keyString + ': ';
             if (typeof object[key] === 'string') {
                 result += '\'' + object[key] + '\'';
             }

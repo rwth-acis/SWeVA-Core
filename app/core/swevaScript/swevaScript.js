@@ -199,9 +199,8 @@ SwevaScript.prototype.set = function (object, property, value) {
  */
 SwevaScript.prototype.sanitize = function (code, errorCallback) {
     //all in one line
-    code = code.replace(/(\r\n|\n|\r)/gm, ""); 
-
-    
+    //code = code.replace(/(\r\n|\n|\r)/gm, ""); 
+   
     var error = '';
     //first make sure it is valid SwevaScript
     var validation = this.verify(code);    
@@ -213,8 +212,10 @@ SwevaScript.prototype.sanitize = function (code, errorCallback) {
         }).join(',');
         //we want to shadow all global variables except the ones we allow, by declaring them as local variables
         //https://stackoverflow.com/posts/26917938/revisions
-        var funcReg = /function *\(([^()]*)\)[ \n\t]*{(.*)}/gmi;
+        //var funcReg = /function *\(([^()]*)\)[ \n\t]*{(.*)}/gmi;
+        var funcReg = /function\s*\(([^()]*)\)\s\{((.|\n)*)\}/gmi;
         var match = funcReg.exec(code);
+       
         //we extract funtion header (decrlaration with parameters) and body
         if (match) {
             

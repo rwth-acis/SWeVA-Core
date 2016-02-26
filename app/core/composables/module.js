@@ -121,9 +121,8 @@ Module.prototype.callService = function (request, input) {
     var self = this;
    
     return new Promise(function (resolve, reject) {
-        
         request
-        .then(function (response) {
+        .then(function (response) {            
             resolve(self.response(response, input, sweva.libs));
         })
         .catch(function (response) {
@@ -147,11 +146,8 @@ Module.prototype.callService = function (request, input) {
  */
 Module.prototype.execute = function (data, input, context, alias, progress) {
     var self = this;
-    
     context = this.getNewContext(context, alias);
-   
-    
-    
+
     return new Promise(function (resolve, reject) {
 
         //only execute, if data and input objects are valid according to the optional schamas
@@ -174,6 +170,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
             else {
                 //call service using the HTTP request
                 self.callService(self.request(data, input, sweva.libs), input).then(function (output) {
+
                     //validate output
                     if (self.validateTypes('dataOut', output)) {
                         //report progress, if callback is defined
