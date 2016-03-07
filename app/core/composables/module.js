@@ -148,8 +148,11 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
     var self = this;
     context = this.getNewContext(context, alias);
 
+    if (input == null) {
+        input = {};
+    }
     return new Promise(function (resolve, reject) {
-
+       
         //only execute, if data and input objects are valid according to the optional schamas
         if (self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
             
@@ -166,6 +169,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
                 else {
                     reject(sweva.ErrorManager.getLastError());
                 }
+                
             }
             else {
                 //call service using the HTTP request

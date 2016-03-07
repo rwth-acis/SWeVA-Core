@@ -996,7 +996,7 @@ Composition.prototype.composableQueueExecution = function (context) {
             data = this.parameters[composableName];
            
             input = this.mapInput(this.input, composableName, this.composables, sweva.libs);
-            
+          
         }
         else {
             continue;
@@ -1298,8 +1298,11 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
     var self = this;
     context = this.getNewContext(context, alias);
 
+    if (input == null) {
+        input = {};
+    }
     return new Promise(function (resolve, reject) {
-
+       
         //only execute, if data and input objects are valid according to the optional schamas
         if (self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
             
@@ -1316,6 +1319,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
                 else {
                     reject(sweva.ErrorManager.getLastError());
                 }
+                
             }
             else {
                 //call service using the HTTP request
@@ -2152,7 +2156,7 @@ ExecutionManager.prototype.execute = function (data, input) {
                             executions.push(composables[key].execute(data, input, '', key, self.progressUpdate.bind(self)));
                         }
                         else {
-                            executions.push(composables[key].execute(data[key], input[key], '', key, self.progressUpdate.bind(self)));
+                            executions.push(composables[key].execute(data[key], input[key] || {}, '', key, self.progressUpdate.bind(self)));
                         }
                     }
                 }

@@ -180,7 +180,7 @@ ExecutionManager.prototype.execute = function (data, input) {
                             executions.push(composables[key].execute(data, input, '', key, self.progressUpdate.bind(self)));
                         }
                         else {
-                            executions.push(composables[key].execute(data[key], input[key], '', key, self.progressUpdate.bind(self)));
+                            executions.push(composables[key].execute(data[key], input[key] || {}, '', key, self.progressUpdate.bind(self)));
                         }
                     }
                 }
