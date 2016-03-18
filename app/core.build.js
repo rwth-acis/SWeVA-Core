@@ -20,7 +20,7 @@ var Ajv = require('../../node_modules/ajv/lib/ajv.js');
 globalObject.sweva.Ajv = new Ajv();
 
 var ComposableLoader = require('./execution/composableLoader.js');
-globalObject.sweva.ComposableLoader = new ComposableLoader('http://localhost:5001/examplesJSON/');
+globalObject.sweva.ComposableLoader = new ComposableLoader('');
 
 globalObject.sweva.ExecutionManager = require('./execution/executionManager.js');
 
@@ -1565,7 +1565,7 @@ function ComposableLoader(basePath, suffix) {
     * @name ComposableLoader#suffix
     * @type {string}
     */
-    this.suffix = suffix || '.json';
+    this.suffix = suffix || '';
     /**
     * Dictionary of the composable names and the corresponding composable objects.
     * @name ComposableLoader#composables

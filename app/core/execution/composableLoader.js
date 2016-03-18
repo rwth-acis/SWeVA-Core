@@ -24,7 +24,7 @@ function ComposableLoader(basePath, suffix) {
     * @name ComposableLoader#suffix
     * @type {string}
     */
-    this.suffix = suffix || '.json';
+    this.suffix = suffix || '';
     /**
     * Dictionary of the composable names and the corresponding composable objects.
     * @name ComposableLoader#composables
