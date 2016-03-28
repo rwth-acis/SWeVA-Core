@@ -1,6 +1,6 @@
 ## SWeVA Core
 
-The core library for the SWeVA platform.
+The Core Framework for the SWeVA platform.
 
 ### Installation
 
