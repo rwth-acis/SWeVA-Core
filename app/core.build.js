@@ -2402,7 +2402,7 @@ SwevaScript.prototype.sanitize = function (code, errorCallback) {
         var allowedGlobals = this.allowedGlobals;
         //get all global variables except the exceptions we defined in {@link SwevaScript#allowedGlobals}
         var globals = Object.keys(window).filter(function (obj) {
-            return !allowedGlobals.hasOwnProperty(obj)
+            return !allowedGlobals.hasOwnProperty(obj) && obj.indexOf("-") == -1;
         }).join(',');
         //we want to shadow all global variables except the ones we allow, by declaring them as local variables
         //https://stackoverflow.com/posts/26917938/revisions
