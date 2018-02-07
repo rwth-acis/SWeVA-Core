@@ -1,9 +1,9 @@
 ﻿'use strict';
 //var axios = require('../../../bower_components/axios/dist/axios.min.js');
 
-var Module = require('../composables/module.js');
-var Composition = require('../composables/composition.js');
-var DefinitionError = require('../errors/definitionError.js');
+var Module = require('../../core/composables/module.js');
+var Composition = require('../../core/composables/composition.js');
+var DefinitionError = require('../../core/errors/definitionError.js');
 
 /**
  * Responsible for dynamically loading composables from a web address.

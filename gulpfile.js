@@ -28,8 +28,8 @@ var shell = require('gulp-shell');
 
 
 var through = require('through2');
-var gutil = require('gulp-util');
-var PluginError = gutil.PluginError;
+var log = require('fancy-log');
+var PluginError = require('plugin-error');
 
 function prefixStream(prefixText) {
     var stream = through();
@@ -125,7 +125,7 @@ gulp.task('clean', function (cb) {
 });
 gulp.task('uglify', [], function () {
     return gulp.src(['app/core.build.js'])
-       .pipe($.uglify().on('error', gutil.log))
+       .pipe($.uglify().on('error', function(){ log('Error...'); }))
        .pipe(gulp.dest('app/'));
 });
 

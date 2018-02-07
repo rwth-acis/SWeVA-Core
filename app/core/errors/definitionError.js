@@ -1,6 +1,6 @@
 ﻿'use strict';
 
-var SwevaError = require('./swevaError.js');
+var SwevaError = require('../../core/errors/swevaError.js');
 /**
  * A definition error should be used, if  the error occured because of incompatible definitions of composables, i.e. before actual execution.
  * @constructor

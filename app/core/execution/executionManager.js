@@ -1,8 +1,8 @@
 ﻿'use strict';
 
-var ExecutionError = require('../errors/executionError.js');
-var Module = require('../composables/module.js');
-var Composition = require('../composables/composition.js');
+var ExecutionError = require('../../core/errors/ExecutionError.js');
+var Module = require('../../core/composables/module.js');
+var Composition = require('../../core/composables/composition.js');
 /**
  * An ExecutionManager is responsible for managing the execution process of compositions and modules.
  * It has two phases: A setup phase, were all dependencies are loaded and initialized and an execution phase,

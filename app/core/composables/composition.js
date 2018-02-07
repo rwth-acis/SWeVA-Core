@@ -1,9 +1,9 @@
 ﻿'use strict';
 
-var Composable = require('./composable.js');
-var Module = require('./module.js');
-var DefinitionError = require('../errors/definitionError.js');
-var ExecutionError = require('../errors/executionError.js');
+var Composable = require('../../core/composables/composable.js');
+var Module = require('../../core/composables/module.js');
+var DefinitionError = require('../../core/errors/definitionError.js');
+var ExecutionError = require('../../core/errors/ExecutionError.js');
 
 /**
  * Represents how a composable is linked to another

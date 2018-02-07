@@ -1,8 +1,8 @@
 ﻿'use strict';
 
-var Composable = require('./composable.js');
-var DefinitionError = require('../errors/definitionError.js');
-var ExecutionError = require('../errors/executionError.js');
+var Composable = require('../../core/composables/composable.js');
+var DefinitionError = require('../../core/errors/definitionError.js');
+var ExecutionError = require('../../core/errors/ExecutionError.js');
 
 /**
  * A user defineable function to create a HTTP request as a promise. It is used to call a remote service using its API.

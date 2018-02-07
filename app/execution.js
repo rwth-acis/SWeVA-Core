@@ -132,7 +132,7 @@ manager.setup({
                 "var requests = new Array();",
                 "libs.get(data,\"movie list\").forEach(function(element) {",
                 "requests.push(",
-                "libs.axios.get(\"http://www.omdbapi.com/?t=\" + element.replace(\" \",\"+\") + \"&y=&plot=short&r=json\")",
+                "libs.axios.get(\"http://www.omdbapi.com/?t=\" + element.replace(\" \",\"+\") + \"&apikey=&y=&plot=short&r=json\")", //ce8daeb5
                 ");",
                 "});",
                 "",

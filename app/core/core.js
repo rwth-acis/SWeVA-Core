@@ -18,15 +18,15 @@ globalObject.sweva.axios = require('../../bower_components/axios/dist/axios.min.
 var Ajv = require('../../node_modules/ajv/lib/ajv.js');
 globalObject.sweva.Ajv = new Ajv();
 
-var ComposableLoader = require('./execution/composableLoader.js');
+var ComposableLoader = require('../../app/core/execution/composableLoader.js');
 globalObject.sweva.ComposableLoader = new ComposableLoader('');
 
-globalObject.sweva.ExecutionManager = require('./execution/executionManager.js');
+globalObject.sweva.ExecutionManager = require('../../app/core/execution/executionManager.js');
 
-var ErrorManager = require('./errors/errorManager.js');
+var ErrorManager = require('../../app/core/errors/errorManager.js');
 globalObject.sweva.ErrorManager = new ErrorManager();
 
-var SwevaScript = require('./swevaScript/swevaScript.js');
+var SwevaScript = require('../../app/core/swevaScript/swevaScript.js');
 globalObject.sweva.SwevaScript = new SwevaScript();
 
 globalObject.sweva.libs = {

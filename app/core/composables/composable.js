@@ -1,7 +1,7 @@
 ﻿'use strict';
 
-var DefinitionError = require('../errors/definitionError.js');
-var ExecutionError = require('../errors/executionError.js');
+var DefinitionError = require('../../core/errors/definitionError.js');
+var ExecutionError = require('../../core/errors/ExecutionError.js');
 var Clone = require('../../../node_modules/clone/clone.js');
 
 /**
