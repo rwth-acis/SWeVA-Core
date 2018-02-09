@@ -12,8 +12,71 @@
     <button onclick="clickbutton()">clickme</button>
 
     <script>
+
+
+      var client = new sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10));
+//      //Gets  called if the websocket/mqtt connection gets disconnected for any reason
+//      client.onConnectionLost = function (responseObject) {
+//        //Depending on your scenario you could implement a reconnect logic here
+//        console.log("connection lost: " + responseObject.errorMessage);
+//      };
+//
+//
+//      //Gets called whenever you receive a message for your subscriptions
+//      client.onMessageArrived = function (message) {
+//        //Do something with the push message you received
+//        console.log(message.payloadString);
+//      };
+//
+//
+//      //Connect Options
+//      var options = {
+//        timeout: 3,
+//        //Gets Called if the connection has sucessfully been established
+//        onSuccess: function () {
+//
+//          client.subscribe('testtopic/aldo', {qos: 2});
+//          console.log("Connected");
+//        },
+//        //Gets Called if the connection could not be established
+//        onFailure: function (message) {
+//          console.log("Connection failed: " + message.errorMessage);
+//        }
+//      };
+
+      // set callback handlers
+      client.onConnectionLost = onConnectionLost;
+      client.onMessageArrived = onMessageArrived;
+
+      // connect the client
+      client.connect({onSuccess:onConnect});
+
+
+      // called when the client connects
+      function onConnect() {
+        // Once a connection has been made, make a subscription and send a message.
+        console.log("onConnect");
+        client.subscribe("World", {qos: 0});
+        message = new sweva.mqtt.Message("Hello");
+        message.destinationName = "World";
+        client.send(message);
+      }
+
+      // called when the client loses its connection
+      function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+          console.log(responseObject);
+        }
+      }
+
+      // called when a message arrives
+      function onMessageArrived(message) {
+        console.log("onMessageArrived:"+message.payloadString);
+      }
+
+
         function clickbutton(event) {
-            var now = Date.now();
+          var now = Date.now();
             manager.execute({
                 adder1: {
                     sum1: 10,

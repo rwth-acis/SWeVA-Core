@@ -1,9 +1,7 @@
 {
   "name": "sweva-core",
   "private": true,
-  "dependencies": {
-    
-  },
+  "dependencies": {},
   "devDependencies": {
     "axios": "0.7.0"
   }

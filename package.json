@@ -25,6 +25,7 @@
     "loke-jsdoc-theme": "2.1.0",
     "merge-stream": "^0.1.7",
     "minami": "1.1.1",
+    "paho-mqtt": "^1.0.4",
     "plugin-error": "^1.0.1",
     "run-sequence": "^1.0.0",
     "through2": "2.0.0",
