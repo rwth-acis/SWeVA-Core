@@ -3,8 +3,7 @@
 <head>
     <title>Hey!</title>
     <script src="core.build.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
-    <!--<script src="execution.js"></script>-->
+    <script src="execution.js"></script>
 </head>
 <body>
     <span id="browser-sync-binding"></span>
@@ -13,37 +12,7 @@
     <button onclick="clickbutton()">clickme</button>
 
     <script>
-
-
       client = new sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10));
-//      //Gets  called if the websocket/mqtt connection gets disconnected for any reason
-//      client.onConnectionLost = function (responseObject) {
-//        //Depending on your scenario you could implement a reconnect logic here
-//        console.log("connection lost: " + responseObject.errorMessage);
-//      };
-//
-//
-//      //Gets called whenever you receive a message for your subscriptions
-//      client.onMessageArrived = function (message) {
-//        //Do something with the push message you received
-//        console.log(message.payloadString);
-//      };
-//
-//
-//      //Connect Options
-//      var options = {
-//        timeout: 3,
-//        //Gets Called if the connection has sucessfully been established
-//        onSuccess: function () {
-//
-//          client.subscribe('testtopic/aldo', {qos: 2});
-//          console.log("Connected");
-//        },
-//        //Gets Called if the connection could not be established
-//        onFailure: function (message) {
-//          console.log("Connection failed: " + message.errorMessage);
-//        }
-//      };
 
       // set callback handlers
       client.onConnectionLost = onConnectionLost;
@@ -52,12 +21,11 @@
       // connect the client
       client.connect({onSuccess:onConnect});
 
-
       // called when the client connects
       function onConnect() {
         // Once a connection has been made, make a subscription and send a message.
-        console.log("onConnect");
-        client.subscribe("World", {qos: 0});
+        console.log("Connected to MQTT via Websockets");
+        client.subscribe("sweva/test", {qos: 0});
         //message = new sweva.mqtt.Message("Hello");
         //message.destinationName = "World";
         //client.send(message);
@@ -72,35 +40,33 @@
 
       // called when a message arrives
       function onMessageArrived(message) {
-        console.log("onMessageArrived:"+message.payloadString);
+        console.log("Message Arrived:"+message.payloadString);
       }
-
 
         function clickbutton(event) {
           var now = Date.now();
-//            manager.execute({
-//                adder1: {
-//                    sum1: 10,
-//                    sum2: 50
-//                },
-//                adder2: {
-//                    sum1: 5,
-//                    sum2: 15
-//                },
-//                clone1: {
-//                    sum1: 20,
-//                    sum2: 10
-//                }
-//            },
-//            {
-//                offset: 0,
-//                invert: 0
-//            })
-//            .then(function (result) {
-//                console.log('time ' + (Date.now() - now) + 'ms');
-//                console.log(result);
-//            });
-
+            manager.execute({
+                adder1: {
+                    sum1: 10,
+                    sum2: 50
+                },
+                adder2: {
+                    sum1: 5,
+                    sum2: 15
+                },
+                clone1: {
+                    sum1: 20,
+                    sum2: 10
+                }
+            },
+            {
+                offset: 0,
+                invert: 0
+            })
+            .then(function (result) {
+                console.log('time ' + (Date.now() - now) + 'ms');
+                console.log(result);
+            });
         }
     </script>
 </body>
