@@ -16,7 +16,7 @@ manager.setup(
       "inputSchema":{},"request":[
         "function (data, input, libs) {","","var repo = 'LAS2peer';",
        // "client = libs.mqtt.connect('broker.mqttdashboard.com')",
-        "client.subscribe('presence')","client.publish('presence', 'Hello mqtt')"
+       // "client.subscribe('presence')","client.publish('presence', 'Hello mqtt')"
         ,"console.log(repo)",
         "return libs.axios.get('https://api.github.com/repos/rwth-acis/'+repo+'/stats/code_frequency');"
         ,"}    "],
