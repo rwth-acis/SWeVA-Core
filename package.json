@@ -2,6 +2,7 @@
   "private": true,
   "devDependencies": {
     "ajv": "1.4.8",
+    "async-mqtt": "^1.0.1",
     "browser-sync": "^2.7.7",
     "browserify": "^16.0.0",
     "clone": "1.0.3",

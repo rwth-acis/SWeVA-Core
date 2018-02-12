@@ -15,6 +15,7 @@ globalObject.sweva = {};
 
 globalObject.sweva.axios = require('../../bower_components/axios/dist/axios.min.js');
 globalObject.sweva.mqtt = require('../../node_modules/paho-mqtt/paho-mqtt.js');
+globalObject.sweva.asyncmqtt = require('../../node_modules/async-mqtt');
 
 var Ajv = require('../../node_modules/ajv/lib/ajv.js');
 globalObject.sweva.Ajv = new Ajv();
@@ -32,9 +33,11 @@ globalObject.sweva.SwevaScript = new SwevaScript();
 
 globalObject.sweva.libs = {
     axios: globalObject.sweva.axios,
-    mqtt: globalObject.sweva.mqtt,
+    mqtt: globalObject.sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10)),
     get: globalObject.sweva.SwevaScript.get,
-    set: globalObject.sweva.SwevaScript.set
+    set: globalObject.sweva.SwevaScript.set,
+    mqttclient: globalObject.sweva.SwevaScript.client,
+    mqttsubscribe: globalObject.sweva.SwevaScript.subscribe
 }
 
 
@@ -42,4 +45,8 @@ globalObject.sweva.libs = {
 globalObject.sweva.settings = {
     enableSandboxing: true
 }
+
+
+//global functions
+
 

@@ -12,36 +12,33 @@
     <button onclick="clickbutton()">clickme</button>
 
     <script>
-      client = new sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10));
-
-      // set callback handlers
-      client.onConnectionLost = onConnectionLost;
-      client.onMessageArrived = onMessageArrived;
-
-      // connect the client
-      client.connect({onSuccess:onConnect});
-
-      // called when the client connects
-      function onConnect() {
-        // Once a connection has been made, make a subscription and send a message.
-        console.log("Connected to MQTT via Websockets");
-        client.subscribe("sweva/test", {qos: 0});
-        //message = new sweva.mqtt.Message("Hello");
-        //message.destinationName = "World";
-        //client.send(message);
-      }
-
-      // called when the client loses its connection
-      function onConnectionLost(responseObject) {
-        if (responseObject.errorCode !== 0) {
-          console.log(responseObject);
-        }
-      }
-
-      // called when a message arrives
-      function onMessageArrived(message) {
-        console.log("Message Arrived:"+message.payloadString);
-      }
+//      client = new sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10));
+//
+//      // set callback handlers
+//      client.onConnectionLost = onConnectionLost;
+//      client.onMessageArrived = onMessageArrived;
+//
+//      // connect the client
+//      client.connect({onSuccess:onConnect});
+//
+//      // called when the client connects
+//      function onConnect() {
+//        // Once a connection has been made, make a subscription and send a message.
+//        console.log("Connected to MQTT via Websockets");
+//        client.subscribe("sweva/test", {qos: 0});
+//      }
+//
+//      // called when the client loses its connection
+//      function onConnectionLost(responseObject) {
+//        if (responseObject.errorCode !== 0) {
+//          console.log(responseObject);
+//        }
+//      }
+//
+//      // called when a message arrives
+//      function onMessageArrived(message) {
+//        console.log("Message Arrived:"+message.payloadString);
+//      }
 
         function clickbutton(event) {
           var now = Date.now();
