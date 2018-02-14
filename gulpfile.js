@@ -70,18 +70,18 @@ var composableToJSON = function () {
 }
 
 // Lint JavaScript
-gulp.task('jshint', function () {
-    return gulp.src([
-        'app/**/*.js',
-        'app/**/*.html',
-        'gulpfile.js'
-    ])
-      .pipe(reload({ stream: true, once: true }))
-      .pipe($.jshint.extract()) // Extract JS from .html files
-      .pipe($.jshint())
-      .pipe($.jshint.reporter('jshint-stylish'))
-      .pipe($.if(!browserSync.active, $.jshint.reporter('fail')));
-});
+// gulp.task('jshint', function () {
+//     return gulp.src([
+//         'app/**/*.js',
+//         'app/**/*.html',
+//         'gulpfile.js'
+//     ])
+//       .pipe(reload({ stream: true, once: true }))
+//       .pipe($.jshint.extract()) // Extract JS from .html files
+//       .pipe($.jshint())
+//       .pipe($.jshint.reporter('jshint-stylish'))
+//       .pipe($.if(!browserSync.active, $.jshint.reporter('fail')));
+// });
 
 gulp.task('browserify', function () {
     return browserify({
@@ -102,36 +102,36 @@ gulp.task('composablesToJSON', function () {
 });
 
 // Copy all files at the root level (app)
-gulp.task('copy', function () {
-    var app = gulp.src([
-      'app/*',
-      '!app/test',
-      '!app/cache-config.json'
-    ], {
-        dot: true
-    }).pipe(gulp.dest('dist'));
-
-    var bower = gulp.src([
-      'bower_components/**/*'
-    ]).pipe(gulp.dest('dist/bower_components'));
-
-    return merge(app, bower)
-      .pipe($.size({ title: 'copy' }));
-});
-
-// Clean output directory
-gulp.task('clean', function (cb) {
-    del(['.tmp', 'dist'], cb);
-});
-gulp.task('uglify', [], function () {
-    return gulp.src(['app/core.build.js'])
-       .pipe($.uglify().on('error', function(){ log('Error...'); }))
-       .pipe(gulp.dest('app/'));
-});
-
-gulp.task('docs', shell.task([
-  './node_modules/.bin/jsdoc app/core/ -r -R README.md -d docs -t ./node_modules/ink-docstrap/template -c jsdocConfig.json'
-]));
+// gulp.task('copy', function () {
+//     var app = gulp.src([
+//       'app/*',
+//       '!app/test',
+//       '!app/cache-config.json'
+//     ], {
+//         dot: true
+//     }).pipe(gulp.dest('dist'));
+//
+//     var bower = gulp.src([
+//       'bower_components/**/*'
+//     ]).pipe(gulp.dest('dist/bower_components'));
+//
+//     return merge(app, bower)
+//       .pipe($.size({ title: 'copy' }));
+// });
+//
+// // Clean output directory
+// gulp.task('clean', function (cb) {
+//     del(['.tmp', 'dist'], cb);
+// });
+// gulp.task('uglify', [], function () {
+//     return gulp.src(['app/core.build.js'])
+//        .pipe($.uglify().on('error', function(){ log('Error...'); }))
+//        .pipe(gulp.dest('app/'));
+// });
+//
+// gulp.task('docs', shell.task([
+//   './node_modules/.bin/jsdoc app/core/ -r -R README.md -d docs -t ./node_modules/ink-docstrap/template -c jsdocConfig.json'
+// ]));
 
 // Watch files for changes & reload
 gulp.task('serve', [], function () {
@@ -196,13 +196,13 @@ gulp.task('serve:dist', ['default'], function () {
     });
 });
 
-// Build production files, the default task
-gulp.task('default', ['clean'], function (cb) {
-    // Uncomment 'cache-config' after 'rename-index' if you are going to use service workers.
-    runSequence(
-      ['copy', 'styles'],
-      'elements',
-      ['jshint', 'images', 'fonts', 'html'],
-      'vulcanize', 'rename-index', // 'cache-config',
-      cb);
-});
+// // Build production files, the default task
+// gulp.task('default', ['clean'], function (cb) {
+//     // Uncomment 'cache-config' after 'rename-index' if you are going to use service workers.
+//     runSequence(
+//       ['copy', 'styles'],
+//       'elements',
+//       ['jshint', 'images', 'fonts', 'html'],
+//       'vulcanize', 'rename-index', // 'cache-config',
+//       cb);
+// });

@@ -14,6 +14,7 @@
     <script>
 //      client = new sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10));
 //
+
 //      // set callback handlers
 //      client.onConnectionLost = onConnectionLost;
 //      client.onMessageArrived = onMessageArrived;
@@ -40,30 +41,53 @@
 //        console.log("Message Arrived:"+message.payloadString);
 //      }
 
+
+
+//var client = sweva.asyncmqtt.connect("ws://broker.mqttdashboard.com:8000/mqtt");
+//
+//// WHen passing async functions as event listeners, make sure to have a try catch block
+//client.on("connect", doStuff);
+//
+//async function doStuff() {
+//
+//  console.log("Starting");
+//  try {
+//    await client.publish("wow/so/cool", "It works!");
+//    // This line doesn't run until the server responds to the publish
+//    await client.end();
+//    // This line doesn't run until the client has disconnected without error
+//    console.log("Done");
+//  } catch (e){
+//    // Do something about it!
+//    console.log(e.stack);
+//    process.exit();
+//  }
+//}
+
         function clickbutton(event) {
           var now = Date.now();
-            manager.execute({
-                adder1: {
-                    sum1: 10,
-                    sum2: 50
-                },
-                adder2: {
-                    sum1: 5,
-                    sum2: 15
-                },
-                clone1: {
-                    sum1: 20,
-                    sum2: 10
-                }
-            },
-            {
-                offset: 0,
-                invert: 0
-            })
-            .then(function (result) {
-                console.log('time ' + (Date.now() - now) + 'ms');
-                console.log(result);
-            });
+//            manager.execute({
+//                adder1: {
+//                    sum1: 10,
+//                    sum2: 50
+//                },
+//                adder2: {
+//                    sum1: 5,
+//                    sum2: 15
+//                },
+//                clone1: {
+//                    sum1: 20,
+//                    sum2: 10
+//                }
+//            },
+//            {
+//                offset: 0,
+//                invert: 0
+//            })
+//            .then(function (result) {
+//                console.log('time ' + (Date.now() - now) + 'ms');
+//                console.log(result);
+//            });
         }
     </script>
 </body>

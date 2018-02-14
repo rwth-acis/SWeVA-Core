@@ -189,74 +189,32 @@ SwevaScript.prototype.set = function (object, property, value) {
     }
 };
 
- SwevaScript.prototype.client =  function(){
 
+
+ SwevaScript.prototype.client =  function(broker){
      var AsyncClient = sweva.asyncmqtt.AsyncClient;
-     var client = new sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10));
-     var asyncClient = new AsyncClient(client);
-
-     // set callback handlers
-     asyncClient._client.onConnectionLost = onConnectionLost;
-     asyncClient._client.onMessageArrived = onMessageArrived;
-
-   // connect the client
-   asyncClient._client.connect({onSuccess:onConnect});
-
-   // called when the client connects
-   function onConnect() {
-     // Once a connection has been made, make a subscription and send a message.
-     console.log("Connected to MQTT via Websockets");
-   }
-
-     // called when the client loses its connection
-     function onConnectionLost(responseObject) {
-       if (responseObject.errorCode !== 0) {
-         console.log(responseObject);
-       }
-     }
-
-     // called when a message arrives
-     function onMessageArrived(message) {
-       console.log("Message Arrived:"+message.payloadString);
-     }
-
-     return asyncClient; //asyncClient.
+     var client = sweva.asyncmqtt.connect(broker);
+     return client; //asyncClient.
 };
 
-// Make the function wait until the connection is made...
-  function waitForMQTTConnection(client, callback) {
-    var promise = new Promise(function(resolve, reject) {
-    setTimeout(
-      function () {
-        if (client._client.isConnected(client) == true) {
-          resolve("Connection Made");
-          if (callback != null) {
-            callback();
-          }
-          return;
-        } else {
-          console.log("wait for connection...")
-          waitForMQTTConnection(client, callback);
-          //reject(Error("It broke"));
-        }
+  SwevaScript.prototype.subscribe  =   function (client , topic){
+     var promise = new Promise(function(resolve, reject) {
+       client.on('connect', function () {
+         client.subscribe(topic);
+         client.on('message', function (topic, message) {
+           console.log(message.toString())
+         });
+          resolve(client);
+       });
+     });
 
-      }, 500); // wait 500 milisecond for the connection...
-    });
-    return promise;
-  }
+     return promise;
 
-  SwevaScript.prototype.subscribe =   function (client){
-
-    var promise = new Promise(function(resolve, reject) {
-      waitForMQTTConnection(client, function(){
-        console.log("Finally here");
-      }).then( function (response) {
-        resolve(client._client);
-        }
-      );
-    });
-    return promise;
   };
+
+
+
+
 
 /**
  * Sanitizes given Javascript code by verifying if it is a safer subset of JavaScript and masking global variables.
