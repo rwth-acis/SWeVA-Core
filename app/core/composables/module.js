@@ -175,8 +175,6 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
             }
             else {
                 //call service using the HTTP request
-                //self.mqttcallback("", "", sweva.libs);
-                  self.mqttcallback("", "").bind(sweva.libs)
                 self.callService(self.request(data, input, sweva.libs, self.mqttcallback)).then(function (output) {
 
 

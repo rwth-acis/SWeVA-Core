@@ -28,7 +28,7 @@ manager.setup(
 
     ,"mqttcallback":[" function (topic, message) {",
       "console.log(message.toString());",
-      " //libs.adddata(1, topic, message);"
+      " //adddata(1, topic, message);"
       ,"}"]
 
 

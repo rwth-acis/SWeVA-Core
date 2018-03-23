@@ -195,8 +195,17 @@ SwevaScript.prototype.set = function (object, property, value) {
      return sweva.asyncmqtt.connect(broker);//asyncClient.
 };
 
+ 
+
   SwevaScript.prototype.subscribe  =   function (client , topic, mqttcallback, libs){
-     var promise = new Promise(function(resolve, reject) {
+
+      var old_mqttcallback = mqttcallback;
+      mqttcallback = function (topic, message) {
+         old_mqttcallback(topic, message)
+         console.log(this);
+      };
+
+      var promise = new Promise(function(resolve, reject) {
        client.on('connect', function () {
          client.subscribe(topic);
          client.on('message', mqttcallback.bind(sweva.libs));
