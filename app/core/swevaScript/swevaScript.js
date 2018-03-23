@@ -192,18 +192,14 @@ SwevaScript.prototype.set = function (object, property, value) {
 
 
  SwevaScript.prototype.client =  function(broker){
-     var AsyncClient = sweva.asyncmqtt.AsyncClient;
-     var client = sweva.asyncmqtt.connect(broker);
-     return client; //asyncClient.
+     return sweva.asyncmqtt.connect(broker);//asyncClient.
 };
 
-  SwevaScript.prototype.subscribe  =   function (client , topic){
+  SwevaScript.prototype.subscribe  =   function (client , topic, mqttcallback, libs){
      var promise = new Promise(function(resolve, reject) {
        client.on('connect', function () {
          client.subscribe(topic);
-         client.on('message', function (topic, message) {
-           console.log(message.toString())
-         });
+         client.on('message', mqttcallback.bind(sweva.libs));
           resolve(client);
        });
      });
@@ -211,6 +207,12 @@ SwevaScript.prototype.set = function (object, property, value) {
      return promise;
 
   };
+
+SwevaScript.prototype.adddata =  function(node, topic, message){
+  self.sweva.ee(self.sweva.ExecutionManager.prototype);
+  var emmiter = new self.sweva.ExecutionManager();
+  //emmiter.emit('onMessageArrived', node, topic, message)
+};
 
 
 

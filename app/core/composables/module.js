@@ -88,8 +88,8 @@ var ExecutionError = require('../../core/errors/ExecutionError.js');
 function Module(initializationObject) {
     this.initialize(initializationObject);
 
-    this.initializeFunction(initializationObject, 'request', 3,
-        function (data, input, libs) {
+    this.initializeFunction(initializationObject, 'request', 4,
+        function (data, input, libs, callback) {
             return new Promise(function (resolve, reject) {
                 resolve(0);
             });
@@ -104,6 +104,8 @@ function Module(initializationObject) {
         });
 
     this.initializeFunction(initializationObject, 'compute', 3, null);
+
+    this.initializeFunction(initializationObject, 'mqttcallback', 2, null);
 }
 //inherit properties
 Module.prototype = Object.create(Composable.prototype);
@@ -173,7 +175,10 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
             }
             else {
                 //call service using the HTTP request
-                self.callService(self.request(data, input, sweva.libs), input).then(function (output) {
+                //self.mqttcallback("", "", sweva.libs);
+                  self.mqttcallback("", "").bind(sweva.libs)
+                self.callService(self.request(data, input, sweva.libs, self.mqttcallback)).then(function (output) {
+
 
                     //validate output
                     if (self.validateTypes('dataOut', output)) {

@@ -15,6 +15,7 @@ globalObject.sweva = {};
 
 globalObject.sweva.axios = require('../../bower_components/axios/dist/axios.min.js');
 globalObject.sweva.asyncmqtt = require('../../node_modules/async-mqtt');
+globalObject.sweva.ee = require("../../node_modules/event-emitter");
 
 var Ajv = require('../../node_modules/ajv/lib/ajv.js');
 globalObject.sweva.Ajv = new Ajv();
@@ -35,7 +36,8 @@ globalObject.sweva.libs = {
     get: globalObject.sweva.SwevaScript.get,
     set: globalObject.sweva.SwevaScript.set,
     mqttclient: globalObject.sweva.SwevaScript.client,
-    mqttsubscribe: globalObject.sweva.SwevaScript.subscribe
+    mqttsubscribe: globalObject.sweva.SwevaScript.subscribe,
+    adddata: globalObject.sweva.SwevaScript.adddata
 }
 
 
