@@ -246,7 +246,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
       } else if (typeof self.request === 'function') {
         // this is an HTTP request node, call service using an HTTP request
 
-        self.callService(self.request(data, input, sweva.libs), input).then(function() {
+        self.callService(self.request(data, input, sweva.libs), input).then(function(output) {
           // the output is already the HTTP response
 
           //validate output
