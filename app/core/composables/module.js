@@ -123,6 +123,8 @@ function Module(initializationObject) {
 Module.prototype = Object.create(Composable.prototype);
 Module.prototype.constructor = Module;
 
+Module.prototype.lastReturnedData = null;
+
 /**
  * Calls the service using the created HTTP request received from {@link Module~requestFunction}.
  *
@@ -157,28 +159,25 @@ Module.prototype.callService = function (request, input) {
  * @param subscribe
  * @param input
  */
-Module.prototype.callSubscription = function(subscribe, input) {
+Module.prototype.callSubscription = function(subscribe, data, input) {
   var self = this;
 
-  debugger;
   return new Promise(function(resolve, reject) {
     var client = subscribe;
     client.on('connect', function() { self.onConnect(client, input, sweva.libs); });
-    client.on('message', function(topic, message) { self.onMessageReceived(topic, message) });
+    if (self.lastReturnedData === null) {
+      self.lastReturnedData = data;
+    }
+    client.on('message', function(topic, message) { self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message); debugger });
 
-    resolve();
-
-    /*.then(function() {
-        resolve(self.onMessageReceived(client, input, sweva.libs));
-      }).catch(function(onSubscription) {
+    resolve(self.onSubscription(data, input, sweva.libs)).catch(function(error) {
         // if we have a function to deal with errors from service directly...
         if (typeof self.requestError === 'function') {
           resolve(self.requestError(response, input, sweva.libs));
         } else {
-          reject(onSubscription);
+          reject(error);
         }
-      }));
-      */
+      });
   });
 };
 
@@ -218,7 +217,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
       } else if (typeof self.subscribe === 'function') {
         // this is subscribing to an asynchronous message queue
 
-        self.callSubscription(self.subscribe(data, input, sweva.libs)).then(function(output) {
+        self.callSubscription(self.subscribe(data, input, sweva.libs), data, input).then(function(output) {
           //validate output
           if (self.validateTypes('dataOut', output)) {
             //report progress, if callback is defined
@@ -227,6 +226,7 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
               progress(alias, self.name, context);
             }
 
+            self.lastReturnedData = output;
             resolve(output);
           } else {
             reject(sweva.ErrorManager.getLastError());

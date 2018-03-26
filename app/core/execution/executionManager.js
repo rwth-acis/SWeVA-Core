@@ -136,7 +136,7 @@ ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
 }
 /**
  * Calculates the current progress state and calls the optionally registered progressCallback.
- * It countsthe percentage of the modules that have finished execution.
+ * It counts the percentage of the modules that have finished execution.
  * @param {string} alias - The alias of the module, under which it is known to the parent composition.
  * @param {string} name - The name of the module.
  * @param {string} context - The context under which the module is executed (its parents).
@@ -159,58 +159,60 @@ ExecutionManager.prototype.progressUpdate = function (alias, name, context) {
  * the input property names must correspond to the composable names for a correct mapping of the input.
  */
 ExecutionManager.prototype.execute = function (data, input) {
-    var executions = [];
-    var self = this;
-   
-    return new Promise(function (resolve, reject) {
-        //closure function
-        var func = function (composables, executions, resolve, reject) {
-            return function () {
-                
-                var onlyOneComposable = false;
-                //check if only one composable will be executed
-                if (Object.keys(composables).length == 1) {
-                    onlyOneComposable = true;
-                }
+  /**
+   * An Array of executions, which are representing Modules (nodes).
+   * @type {Array}
+   */
+  var executions = [];
+  var self = this;
 
-                for (var key in composables) {
-                    
-                    if (composables.hasOwnProperty(key)) {
-                        if (onlyOneComposable) {
-                            executions.push(composables[key].execute(data, input, '', key, self.progressUpdate.bind(self)));
-                        }
-                        else {
-                            executions.push(composables[key].execute(data[key], input[key] || {}, '', key, self.progressUpdate.bind(self)));
-                        }
-                    }
-                }
-                
-                Promise.all(executions).then(function (results) {                    
-                    if (onlyOneComposable) {                        
-                        return resolve(results[0]);
-                    }
-                    resolve(results);
-                })
-                .catch(function (results) {
-                    if (onlyOneComposable) {
-                        return resolve(results);
-                    }
-                    sweva.ErrorManager.error(
-                      new ExecutionError('Something unexpected happened: ' + results,
-                      this.name, results));
-                    reject(results);
-                });
+  return new Promise(function (resolve, reject) {
+    //closure function
+    var func = function (composables, executions, resolve, reject) {
+      return function () {
+
+        var onlyOneComposable = false;
+        // check if only one composable will be executed, because then you don't go into the loop.
+        if (Object.keys(composables).length == 1) {
+          onlyOneComposable = true;
+        }
+
+        for (var key in composables) {
+          if (composables.hasOwnProperty(key)) {
+            if (onlyOneComposable) {
+              executions.push(composables[key].execute(data, input, '', key, self.progressUpdate.bind(self)));
             }
+            else {
+              executions.push(composables[key].execute(data[key], input[key] || {}, '', key, self.progressUpdate.bind(self)));
+            }
+          }
         }
-        
-        if (self.isReady) {
-            func(self.composables, executions, resolve, reject)();
-        }
-        else {
-            self.wantsToExecute = true;
-            self.executeCallback = func(self.composables, executions, resolve, reject);
-        }
-    });
+        debugger;
+        // when all the execution Promises have resolved...
+        Promise.all(executions).then(function (results) {
+          if (onlyOneComposable) {
+            return resolve(results[0]);
+          }
+          resolve(results);
+        }).catch(function (results) {
+          if (onlyOneComposable) {
+            return resolve(results);
+          }
+          sweva.ErrorManager.error(
+            new ExecutionError('Something unexpected happened: ' + results,
+            this.name, results));
+          reject(results);
+        });
+      }
+    };
+
+    if (self.isReady) {
+      func(self.composables, executions, resolve, reject)();
+    } else {
+      self.wantsToExecute = true;
+      self.executeCallback = func(self.composables, executions, resolve, reject);
+    }
+  });
 }
 //alias
 ExecutionManager.prototype.run = ExecutionManager.prototype.execute;

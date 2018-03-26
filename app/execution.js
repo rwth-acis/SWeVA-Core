@@ -118,13 +118,14 @@ var simpleMQTTSubscribe = {
         "}"
       ],
       "onSubscription": [
-        "function (response, input, libs) {",
-        "  return 'onSubscription reached'",
+        "function (data, input, libs) {",
+        "  return 1;",
         "}"
       ],
       "onMessageReceived": [
-        "function(topic, message) {",
-        "console.log(message.toString());",
+        "function(data, topic, message) {",
+        "  console.log('data: ' + data + ', message received: ' + message.toString());",
+        "  return data + 1;",
         "}"
       ]
     }
