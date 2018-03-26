@@ -326,7 +326,9 @@ var ExecutionError = require('../../core/errors/ExecutionError.js');
  * @param {compositionInitalizer} initializationObject - The object with optional properties for the composition.
  * 
  */
-function Composition(initializationObject) {
+function Composition(initializationObject, manager) {
+    this.manager = manager;
+
     this.initializeProperty(initializationObject, 'composables', {});
     this.initializeProperty(initializationObject, 'links', {});
 
@@ -386,10 +388,10 @@ Composition.prototype.loadComposables = function () {
                 else { //otherwise create from given object directly
                     var type = self.composables[key].type;
                     if(type=='module'){
-                        self.composables[key] = new Module(self.composables[key]);
+                        self.composables[key] = new Module(self.composables[key], self.manager);
                     }
                     else {
-                        self.composables[key] = new Composition(self.composables[key]);
+                        self.composables[key] = new Composition(self.composables[key], self.manager);
                     }
                     
                 }
@@ -1191,7 +1193,9 @@ var ExecutionError = require('../../core/errors/ExecutionError.js');
  * @param {moduleInitalizer} initializationObject - The object with optional properties for the composition.
  *
  */
-function Module(initializationObject) {
+function Module(initializationObject, manager) {
+  this.manager = manager;
+
   this.initialize(initializationObject);
 
   // compute node type
@@ -1274,7 +1278,11 @@ Module.prototype.callSubscription = function(subscribe, data, input) {
     if (self.lastReturnedData === null) {
       self.lastReturnedData = data;
     }
-    client.on('message', function(topic, message) { self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message); debugger });
+    client.on('message', function(topic, message) {
+      self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message);
+      // now notify the execution manager
+      self.manager.onModuleUpdate(self, self.lastReturnedData); //TODO: add some key to uniquely identify module
+    });
 
     resolve(self.onSubscription(data, input, sweva.libs)).catch(function(error) {
         // if we have a function to deal with errors from service directly...
@@ -2083,6 +2091,8 @@ function ExecutionManager(name) {
     * @type {function}
     */
     this.progressCallback = null;
+
+    this.reexecutionListeners = [];
 }
 /**
  * Registers the callback function to track progress.
@@ -2090,7 +2100,23 @@ function ExecutionManager(name) {
  */
 ExecutionManager.prototype.onProgress = function (callback) {
     this.progressCallback = callback;
-}
+};
+
+/**
+ * Registers a callback function that gets called whenever any asynchronous node re-executes parts of the composition.
+ *
+ * @param callback
+ */
+ExecutionManager.prototype.addReexecutionListener = function(callback) {
+  this.reexecutionListeners.push(callback);
+};
+
+ExecutionManager.prototype.onModuleUpdate = function(module, result) {
+  for (var i = 0; i < this.reexecutionListeners.length; i++) {
+    this.reexecutionListeners[i](result);
+  };
+};
+
 /**
  * Initializes all required composables, loads dependencies, validates.
  * @param {Array.<string|Composable>} executionArray - Array of composables that will be executed.
@@ -2140,11 +2166,12 @@ ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
             }
             
             if (composable.type == 'module') {
-                this.composables[composable.name] = new Module(composable);
+              debugger;
+                this.composables[composable.name] = new Module(composable, this);
                 sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
             }
             else {
-                this.composables[composable.name] = new Composition(composable);
+                this.composables[composable.name] = new Composition(composable, this);
                 sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
                 //composables of a composition need also to be loaded
                 needsLoading.push(this.composables[composable.name].loadComposables());
@@ -2454,44 +2481,6 @@ SwevaScript.prototype.set = function (object, property, value) {
         object[property] = value;
     }
 };
-
-
-
- SwevaScript.prototype.client =  function(broker){
-     return sweva.asyncmqtt.connect(broker);//asyncClient.
-};
-
- 
-
-  SwevaScript.prototype.subscribe  =   function (client , topic, mqttcallback, libs){
-
-      var old_mqttcallback = mqttcallback;
-      mqttcallback = function (topic, message) {
-         old_mqttcallback(topic, message)
-         console.log(this);
-      };
-
-      var promise = new Promise(function(resolve, reject) {
-       client.on('connect', function () {
-         client.subscribe(topic);
-         client.on('message', mqttcallback.bind(sweva.libs));
-          resolve(client);
-       });
-     });
-
-     return promise;
-
-  };
-
-SwevaScript.prototype.adddata =  function(node, topic, message){
-  self.sweva.ee(self.sweva.ExecutionManager.prototype);
-  var emmiter = new self.sweva.ExecutionManager();
-  //emmiter.emit('onMessageArrived', node, topic, message)
-};
-
-
-
-
 
 /**
  * Sanitizes given Javascript code by verifying if it is a safer subset of JavaScript and masking global variables.

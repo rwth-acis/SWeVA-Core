@@ -37,6 +37,8 @@ function ExecutionManager(name) {
     * @type {function}
     */
     this.progressCallback = null;
+
+    this.reexecutionListeners = [];
 }
 /**
  * Registers the callback function to track progress.
@@ -44,7 +46,23 @@ function ExecutionManager(name) {
  */
 ExecutionManager.prototype.onProgress = function (callback) {
     this.progressCallback = callback;
-}
+};
+
+/**
+ * Registers a callback function that gets called whenever any asynchronous node re-executes parts of the composition.
+ *
+ * @param callback
+ */
+ExecutionManager.prototype.addReexecutionListener = function(callback) {
+  this.reexecutionListeners.push(callback);
+};
+
+ExecutionManager.prototype.onModuleUpdate = function(module, result) {
+  for (var i = 0; i < this.reexecutionListeners.length; i++) {
+    this.reexecutionListeners[i](result);
+  };
+};
+
 /**
  * Initializes all required composables, loads dependencies, validates.
  * @param {Array.<string|Composable>} executionArray - Array of composables that will be executed.
@@ -94,11 +112,12 @@ ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
             }
             
             if (composable.type == 'module') {
-                this.composables[composable.name] = new Module(composable);
+              debugger;
+                this.composables[composable.name] = new Module(composable, this);
                 sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
             }
             else {
-                this.composables[composable.name] = new Composition(composable);
+                this.composables[composable.name] = new Composition(composable, this);
                 sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
                 //composables of a composition need also to be loaded
                 needsLoading.push(this.composables[composable.name].loadComposables());

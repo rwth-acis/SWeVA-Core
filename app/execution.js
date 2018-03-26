@@ -633,7 +633,10 @@ var mqttComposition = {"type":"composition",
 
 var now = Date.now();
 var manager = new sweva.ExecutionManager();
-console.log("starting...")
+manager.addReexecutionListener(function(result) {
+  console.log('the demo has a new result: ' + result);
+});
+console.log("starting...");
 manager.setup(simpleMQTTSubscribe);
 manager.onProgress(function (progress) {
   //console.log(progress);

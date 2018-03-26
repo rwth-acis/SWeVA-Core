@@ -97,7 +97,9 @@ var ExecutionError = require('../../core/errors/ExecutionError.js');
  * @param {compositionInitalizer} initializationObject - The object with optional properties for the composition.
  * 
  */
-function Composition(initializationObject) {
+function Composition(initializationObject, manager) {
+    this.manager = manager;
+
     this.initializeProperty(initializationObject, 'composables', {});
     this.initializeProperty(initializationObject, 'links', {});
 
@@ -157,10 +159,10 @@ Composition.prototype.loadComposables = function () {
                 else { //otherwise create from given object directly
                     var type = self.composables[key].type;
                     if(type=='module'){
-                        self.composables[key] = new Module(self.composables[key]);
+                        self.composables[key] = new Module(self.composables[key], self.manager);
                     }
                     else {
-                        self.composables[key] = new Composition(self.composables[key]);
+                        self.composables[key] = new Composition(self.composables[key], self.manager);
                     }
                     
                 }

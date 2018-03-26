@@ -85,7 +85,9 @@ var ExecutionError = require('../../core/errors/ExecutionError.js');
  * @param {moduleInitalizer} initializationObject - The object with optional properties for the composition.
  *
  */
-function Module(initializationObject) {
+function Module(initializationObject, manager) {
+  this.manager = manager;
+
   this.initialize(initializationObject);
 
   // compute node type
@@ -168,7 +170,11 @@ Module.prototype.callSubscription = function(subscribe, data, input) {
     if (self.lastReturnedData === null) {
       self.lastReturnedData = data;
     }
-    client.on('message', function(topic, message) { self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message); debugger });
+    client.on('message', function(topic, message) {
+      self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message);
+      // now notify the execution manager
+      self.manager.onModuleUpdate(self, self.lastReturnedData); //TODO: add some key to uniquely identify module
+    });
 
     resolve(self.onSubscription(data, input, sweva.libs)).catch(function(error) {
         // if we have a function to deal with errors from service directly...
