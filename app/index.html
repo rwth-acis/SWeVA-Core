@@ -12,57 +12,7 @@
     <button onclick="clickbutton()">clickme</button>
 
     <script>
-//      client = new sweva.mqtt.Client("broker.mqttdashboard.com", Number(8000), "myclientid_" + parseInt(Math.random() * 100, 10));
-//
 
-//      // set callback handlers
-//      client.onConnectionLost = onConnectionLost;
-//      client.onMessageArrived = onMessageArrived;
-//
-//      // connect the client
-//      client.connect({onSuccess:onConnect});
-//
-//      // called when the client connects
-//      function onConnect() {
-//        // Once a connection has been made, make a subscription and send a message.
-//        console.log("Connected to MQTT via Websockets");
-//        client.subscribe("sweva/test", {qos: 0});
-//      }
-//
-//      // called when the client loses its connection
-//      function onConnectionLost(responseObject) {
-//        if (responseObject.errorCode !== 0) {
-//          console.log(responseObject);
-//        }
-//      }
-//
-//      // called when a message arrives
-//      function onMessageArrived(message) {
-//        console.log("Message Arrived:"+message.payloadString);
-//      }
-
-
-
-//var client = sweva.asyncmqtt.connect("ws://broker.mqttdashboard.com:8000/mqtt");
-//
-//// WHen passing async functions as event listeners, make sure to have a try catch block
-//client.on("connect", doStuff);
-//
-//async function doStuff() {
-//
-//  console.log("Starting");
-//  try {
-//    await client.publish("wow/so/cool", "It works!");
-//    // This line doesn't run until the server responds to the publish
-//    await client.end();
-//    // This line doesn't run until the client has disconnected without error
-//    console.log("Done");
-//  } catch (e){
-//    // Do something about it!
-//    console.log(e.stack);
-//    process.exit();
-//  }
-//}
 
         function clickbutton(event) {
 
