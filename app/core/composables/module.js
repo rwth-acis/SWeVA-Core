@@ -119,7 +119,7 @@ function Module(initializationObject, manager) {
 
   this.initializeFunction(initializationObject, 'onSubscription', 3, null);
 
-  this.initializeFunction(initializationObject, 'onMessageReceived', 2, null);
+  this.initializeFunction(initializationObject, 'onMessageReceived', 4, null);
 }
 //inherit properties
 Module.prototype = Object.create(Composable.prototype);
@@ -171,7 +171,7 @@ Module.prototype.callSubscription = function(subscribe, data, input) {
       self.lastReturnedData = data;
     }
     client.on('message', function(topic, message) {
-      self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message);
+      self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message, sweva.libs);
       // now notify the execution manager
       self.manager.onModuleUpdate(self, self.lastReturnedData); //TODO: add some key to uniquely identify module
     });
