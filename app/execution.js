@@ -1,5 +1,139 @@
 ﻿'use strict';
 
+var simpleHTTPRequest = {
+  "type": "composition",
+  "name": "composition1",
+  "dataInNames": [],
+  "dataInSchema": {},
+  "dataOutNames": [
+    "result"
+  ],
+  "dataOutSchema": {},
+  "inputNames": [],
+  "inputSchema": {},
+  "mapDataIn": [
+    "function (data, composableName, composables, libs) {",
+    "if (data.hasOwnProperty(composableName)) {",
+    "return libs.get(data, composableName);",
+    "}",
+    "return null;",
+    "}    "
+  ],
+  "mapDataOut": [
+    "function (output, libs) {",
+    "return output;",
+    "}    "
+  ],
+  "mapInput": [
+    "function (input, moduleName, modules, libs) {",
+    "if (input.hasOwnProperty(moduleName)) {",
+    "return libs.get(input, moduleName);",
+    "}",
+    "return null;",
+    "}"
+  ],
+  "composables": {
+    "Node121": {
+      "type": "module",
+      "name": "code_frequency",
+      "description": "A simple module template.",
+      "dataInNames": [],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "code_frequency"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "request": [
+        "function (data, input, libs) {",
+        "return libs.axios.get('https://api.github.com/repos/rwth-acis/LAS2peer/stats/code_frequency');",
+        "}    "
+      ],
+      "response": [
+        "function (response, input, libs) {",
+        "return { code_frequency:response.data }",
+        "}"
+      ]
+    }
+  },
+  "links": {},
+  "controls": [],
+  "visualization": "string"
+};
+
+var simpleMQTTSubscribe = {
+  "type": "composition",
+  "name": "composition1",
+  "dataInNames": [],
+  "dataInSchema": {},
+  "dataOutNames": [
+    "result"
+  ],
+  "dataOutSchema": {},
+  "inputNames": [],
+  "inputSchema": {},
+  "mapDataIn": [
+    "function (data, composableName, composables, libs) {",
+    "if (data.hasOwnProperty(composableName)) {",
+    "return libs.get(data, composableName);",
+    "}",
+    "return null;",
+    "}    "
+  ],
+  "mapDataOut": [
+    "function (output, libs) {",
+    "return output;",
+    "}    "
+  ],
+  "mapInput": [
+    "function (input, moduleName, modules, libs) {",
+    "if (input.hasOwnProperty(moduleName)) {",
+    "return libs.get(input, moduleName);",
+    "}",
+    "return null;",
+    "}"
+  ],
+  "composables": {
+    "Node121": {
+      "type": "module",
+      "name": "code_frequency",
+      "description": "A simple module template.",
+      "dataInNames": [],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "code_frequency"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "subscribe": [
+        "function(data, input, libs) {",
+        "  return libs.mqtt.connect('ws://broker.mqttdashboard.com:8000/mqtt');",
+        "}"
+      ],
+      "onConnect": [
+        "function(client, input, libs) {",
+        "  client.subscribe('test');",
+        "}"
+      ],
+      "onSubscription": [
+        "function (response, input, libs) {",
+        "  return 'onSubscription reached'",
+        "}"
+      ],
+      "onMessageReceived:": [
+        "function(topic, message) {",
+        "return 'message received'",
+        "}"
+      ]
+    }
+  },
+  "links": {},
+  "controls": [],
+  "visualization": "string"
+};
+
 /**
  * This composition is about an IMDB movie rating.
  *
@@ -492,14 +626,14 @@ var mqttComposition = {"type":"composition",
         ,"}"]
 
 
-    }},"links":{},"controls":[{"label":"Section1","controls":[]}],"visualization":"sweva-visualization-raw/dist/sweva-visualization-raw.min.html"}
+    }},"links":{},"controls":[{"label":"Section1","controls":[]}],"visualization":"sweva-visualization-raw/dist/sweva-visualization-raw.min.html"
 };
 
 
 var now = Date.now();
 var manager = new sweva.ExecutionManager();
 console.log("starting...")
-manager.setup(mqttComposition);
+manager.setup(simpleMQTTSubscribe);
 manager.onProgress(function (progress) {
   //console.log(progress);
 });

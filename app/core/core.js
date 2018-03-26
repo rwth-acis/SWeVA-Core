@@ -32,10 +32,11 @@ globalObject.sweva.SwevaScript = new SwevaScript();
 
 globalObject.sweva.libs = {
     axios: globalObject.sweva.axios,
+    mqtt: globalObject.sweva.asyncmqtt,
     get: globalObject.sweva.SwevaScript.get,
     set: globalObject.sweva.SwevaScript.set,
-    mqttclient: globalObject.sweva.SwevaScript.client,
-    mqttsubscribe: globalObject.sweva.SwevaScript.subscribe,
+    //mqttclient: globalObject.sweva.SwevaScript.client,
+    //mqttsubscribe: globalObject.sweva.SwevaScript.subscribe,
     adddata: globalObject.sweva.SwevaScript.adddata
 }
 
