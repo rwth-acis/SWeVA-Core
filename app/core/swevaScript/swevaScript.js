@@ -189,44 +189,6 @@ SwevaScript.prototype.set = function (object, property, value) {
     }
 };
 
-
-
- SwevaScript.prototype.client =  function(broker){
-     return sweva.asyncmqtt.connect(broker);//asyncClient.
-};
-
- 
-
-  SwevaScript.prototype.subscribe  =   function (client , topic, mqttcallback, libs){
-
-      var old_mqttcallback = mqttcallback;
-      mqttcallback = function (topic, message) {
-         old_mqttcallback(topic, message)
-         console.log(this);
-      };
-
-      var promise = new Promise(function(resolve, reject) {
-       client.on('connect', function () {
-         client.subscribe(topic);
-         client.on('message', mqttcallback.bind(sweva.libs));
-          resolve(client);
-       });
-     });
-
-     return promise;
-
-  };
-
-SwevaScript.prototype.adddata =  function(node, topic, message){
-  self.sweva.ee(self.sweva.ExecutionManager.prototype);
-  var emmiter = new self.sweva.ExecutionManager();
-  //emmiter.emit('onMessageArrived', node, topic, message)
-};
-
-
-
-
-
 /**
  * Sanitizes given Javascript code by verifying if it is a safer subset of JavaScript and masking global variables.
  * {@link SwevaScript#verify} is performed internally, so you do not need to verify explicitly beforehand.
