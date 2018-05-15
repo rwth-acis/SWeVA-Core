@@ -112,7 +112,6 @@ ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
             }
             
             if (composable.type == 'module') {
-              debugger;
                 this.composables[composable.name] = new Module(composable, this);
                 sweva.ComposableLoader.add(composable.name, this.composables[composable.name]);
             }
@@ -206,7 +205,7 @@ ExecutionManager.prototype.execute = function (data, input) {
             }
           }
         }
-        debugger;
+
         // when all the execution Promises have resolved...
         Promise.all(executions).then(function (results) {
           if (onlyOneComposable) {
