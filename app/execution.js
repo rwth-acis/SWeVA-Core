@@ -600,46 +600,160 @@ var movieRatingComposition = {
  *
  * @type {{type: string, name: string, dataInNames: Array, dataInSchema: {}, dataOutNames: string[], dataOutSchema: {}, inputNames: Array, inputSchema: {}, mapDataIn: string[], mapDataOut: string[], mapInput: string[], composables: {Node40: {type: string, name: string, description: string, dataInNames: Array, dataInSchema: {}, dataOutNames: string[], dataOutSchema: {}, inputNames: string[], inputSchema: {}, request: string[], response: string[], mqttcallback: string[]}}, links: {}, controls: *[], visualization: string}}
  */
-var mqttComposition = {"type":"composition",
-  "name":"composition1",
-  "dataInNames":[],
-  "dataInSchema":{},
-  "dataOutNames":["result"],
-  "dataOutSchema":{},
-  "inputNames":[],
-  "inputSchema":{},
-  "mapDataIn":[
-    "function (data, composableName, composables, libs) {"
-    ,"if (data.hasOwnProperty(composableName)) {"
-    ,"return libs.get(data, composableName);","}","return null;","}"],"mapDataOut":["function (output, libs) {","return output;","}"],"mapInput":["function (input, moduleName, modules, libs) {","if (input.hasOwnProperty(moduleName)) {","return libs.get(input, moduleName);","}","return null;","}"],"composables":{"Node40":{"type":"module","name":"code_frequency","description":"A simple module template.","dataInNames":[],"dataInSchema":{},"dataOutNames":["code_frequency"],"dataOutSchema":{},"inputNames":["repository"],"inputSchema":{},"request":[
-        "function (data, input, libs, callback) {","","var repo = 'LAS2peer';",
-        "","if(input.repository){","repo = input.repository;","}","",
-        //mqtt code
-        "  var client =  libs.mqttclient('ws://broker.mqttdashboard.com:8000/mqtt');","",
-        "return libs.mqttsubscribe(client, 'sweva', callback, libs);","",
-
-        "}    "],"response":["function (response, input, libs) {","return { code_frequency:response }","}"]
-
-
-      ,"mqttcallback":[" function (topic, message) {",
-        "console.log(message.toString());",
-        " //adddata(1, topic, message);"
-        ,"}"]
-
-
-    }},"links":{},"controls":[{"label":"Section1","controls":[]}],"visualization":"sweva-visualization-raw/dist/sweva-visualization-raw.min.html"
+var mqttComposition = {
+  "type": "composition",
+  "name": "composition1",
+  "dataInNames": [],
+  "dataInSchema": {},
+  "dataOutNames": [
+    "result"
+  ],
+  "dataOutSchema": {},
+  "inputNames": [],
+  "inputSchema": {},
+  "mapDataIn": [
+    "function (data, composableName, composables, libs) {",
+    "if (data.hasOwnProperty(composableName)) {",
+    "return libs.get(data, composableName);",
+    "}",
+    "return null;",
+    "}"
+  ],
+  "mapDataOut": [
+    "function (output, libs) {",
+    "return output;",
+    "}"
+  ],
+  "mapInput": [
+    "function (input, moduleName, modules, libs) {",
+    "if (input.hasOwnProperty(moduleName)) {",
+    "return libs.get(input, moduleName);",
+    "}",
+    "return null;",
+    "}"
+  ],
+  "composables": {
+    "Node180": {
+      "type": "module",
+      "name": "module1",
+      "description": "A simple module template.",
+      "dataInNames": [],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "data_in"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "subscribe": [
+        "function (data, input, libs) {",
+        "return libs.mqtt.connect('ws://broker.mqttdashboard.com:8000/mqtt');",
+        "}"
+      ],
+      "onConnect": [
+        "function (client, input, libs) {",
+        "client.subscribe('sweva1');",
+        "}"
+      ],
+      "onSubscription": [
+        "function (data, topic, libs) {",
+        "",
+        "var datas = new Array();",
+        "var element = {};",
+        "element.label = 'Sweva 1';",
+        "element.data = new Array();",
+        "datas = datas.concat(element);",
+        "var element = {};",
+        "element.label = 'Sweva 2';",
+        "element.data = new Array();",
+        "datas = datas.concat(element);",
+        "return {data_in: datas};",
+        "",
+        "}"
+      ],
+      "onMessageReceived": [
+        "function (data, topic, message, libs) {",
+        "",
+        "var temprerature = message.toString();",
+        "",
+        "",
+        "",
+        "//libs.get(data, 0).data.push(temprerature);",
+        "",
+        "",
+        "",
+        "return {data_in: temprerature};",
+        "",
+        "}"
+      ]
+    },
+    "Node253": {
+      "type": "module",
+      "name": "module65",
+      "description": "A simple module template.",
+      "dataInNames": [
+        "data_in"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "subscribe": [
+        "function (data, input, libs) {",
+        "return libs.mqtt.connect('ws://broker.mqttdashboard.com:8000/mqtt');",
+        "}"
+      ],
+      "onConnect": [
+        "function (client, input, libs) {",
+        "client.subscribe('sweva2');",
+        "}"
+      ],
+      "onSubscription": [
+        "function (data, topic, libs) {",
+        "console.log(data);",
+        "return {first: data, second : \"hello\"};",
+        "}"
+      ],
+      "onMessageReceived": [
+        "function (data, topic, message, libs) {",
+        "",
+        "var temprerature = message.toString();",
+        "",
+        "",
+        "//libs.get(data, 1).data.push(temprerature);",
+        "",
+        "",
+        "",
+        "return {data_in: temprerature};",
+        "",
+        "}"
+      ]
+    }
+  },
+  "links": {
+    "Node180": {
+      "data_in": {
+        "Node253": "data_in"
+      }
+    }
+  },
+  "controls": [
+    {
+      "label": "Section1",
+      "controls": []
+    }
+  ],
+  "visualization": "sweva-visualization-raw/dist/sweva-visualization-raw.min.html"
 };
 
 
 var now = Date.now();
 var manager = new sweva.ExecutionManager();
-manager.addReexecutionListener(function(result) {
-  console.log('the demo has a new result: ' + result);
-});
 console.log("starting...");
-manager.setup(simpleMQTTSubscribe);
+manager.setup(mqttComposition);
 manager.onProgress(function (progress) {
-  //console.log(progress);
+  console.log(progress);
 });
 
 

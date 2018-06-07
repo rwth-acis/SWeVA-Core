@@ -37,6 +37,7 @@ function ExecutionManager(name) {
     * @type {function}
     */
     this.progressCallback = null;
+    this.updateVisualizationNotifier = null;
 
     this.reexecutionListeners = [];
 }
@@ -49,17 +50,48 @@ ExecutionManager.prototype.onProgress = function (callback) {
 };
 
 /**
+ * Registers the callback function to update visualization on MQTT data received after reexecuting the sweva-graph.
+ * @param {function} - Callback function for updating the visualization.
+ */
+ExecutionManager.prototype.onMQTTDataRecieved = function (callback) {
+  this.updateVisualizationNotifier = callback;
+};
+
+ExecutionManager.prototype.sendDataToVisualization = function (result) {
+  if (this.updateVisualizationNotifier !== null) {
+    this.updateVisualizationNotifier(result);
+  }
+}
+
+/**
  * Registers a callback function that gets called whenever any asynchronous node re-executes parts of the composition.
  *
  * @param callback
  */
-ExecutionManager.prototype.addReexecutionListener = function(callback) {
-  this.reexecutionListeners.push(callback);
+ExecutionManager.prototype.addReexecutionListener = function(callback, module_name) {
+  if(this.reexecutionListeners.length !== 0) {
+    for(var key in this.reexecutionListeners) {
+      if (this.reexecutionListeners[key].module_name == module_name) {
+        this.reexecutionListeners.splice(key,1);
+      }
+    }
+      this.reexecutionListeners.push({
+        callback: callback,
+        module_name: module_name
+      });
+
+  } else if(module_name != false) {
+    this.reexecutionListeners.push({
+      callback: callback,
+      module_name: module_name
+    });
+  }
+
 };
 
-ExecutionManager.prototype.onModuleUpdate = function(module, result) {
-  for (var i = 0; i < this.reexecutionListeners.length; i++) {
-    this.reexecutionListeners[i](result);
+ExecutionManager.prototype.onModuleUpdate = function(module) {
+  for(var i in this.reexecutionListeners) {
+    if(this.reexecutionListeners[i].module_name == module.mqtt_sweva_parameters.module_name) this.reexecutionListeners[i].callback(module);
   };
 };
 

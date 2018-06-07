@@ -733,11 +733,9 @@ Composition.prototype.composableQueueExecution = function (context) {
 
         //not continued = composableName can be executed (has data vailable)
         var self = this;
-       
         //closure function, to get the current composable for each function
         var func = function (composableName) {
             return function (output) {
-                
                 //check if composable does not provide data to other composables (end of execution chain)
                 if (self.endingComposables.hasOwnProperty(composableName)) {
                     
@@ -786,15 +784,62 @@ Composition.prototype.composableQueueExecution = function (context) {
                 }
                 //recursive execution of the next composables, as this one just finished and probably resolved some data dependencies
                 //console.log(self.parameters)
+
+                self.manager.addReexecutionListener(function(result) {
+                    self.needsReloadingVisualization = true;
+                    self.progress = result.mqtt_sweva_parameters.data.progress;
+                    self.context = result.mqtt_sweva_parameters.context;
+                    self.parameters = result.mqtt_sweva_parameters.data.parameters;
+                    self.output = result.mqtt_sweva_parameters.data.output;
+                    self.mqtt_client = result.mqtt_sweva_parameters.data.client;
+                    // if(result.lastReturnedData){
+                    //     for (var key in self.composables) {
+                    //       if(self.composables[key].name == result.name){
+                    //           var output =  self.composables[key].dataOutNames[0];
+                    //           for (var i in self.composables[key].dataInNames){
+                    //             self.parameters[key][self.composables[key].dataInNames[i]] = result.lastReturnedData[output];
+                    //           }
+                    //       }
+                    //     }
+                    // }
+                    self.unlcearedComposables = JSON.parse(JSON.stringify(result.mqtt_sweva_parameters.data.unclearedComposablesClone));
+                    self.composableQueueExecution.apply(self, [self.context]);
+                    console.log('recomputing demo result');
+                }, self.mqtt_module_name);
                 self.composableQueueExecution.apply(self, [context]);
+
+
             }
+
         };
         //mark composable as cleared
         if (!this.unlcearedComposables[i].cleared) {
+
+            //Retrive Data nedded for the ASYNC calls of the MQTT nodes
+            //Check if the current node about to be cleared is an MQTT node
+          var mqtt_sweva_parameters = false;
+          if (typeof this.composables[this.unlcearedComposables[i].composable].subscribe === 'function'){
+            self.mqtt_module_name = this.composables[this.unlcearedComposables[i].composable].name;
+            mqtt_sweva_parameters = {
+              module_name: this.composables[this.unlcearedComposables[i].composable].name,
+              context: context,
+              data: {
+                parameters: this.parameters,
+                output: this.output,
+                unclearedComposablesClone: JSON.parse(JSON.stringify(this.unlcearedComposables)),
+                process: this.progress,
+                client: this.mqtt_client
+              }
+            };
+          } else {
+            self.mqtt_module_name = false;
+          }
+
+
             this.unlcearedComposables[i].cleared = true;
            
             //execute composable
-            this.composables[composableName].execute(data, input, context, composableName, this.progress)
+            this.composables[composableName].execute(data, input, context, composableName, mqtt_sweva_parameters, this.progress)
                 .then(
                 func(composableName))
                 .catch(function (error) {
@@ -848,6 +893,9 @@ Composition.prototype.execute = function (data, input, context, alias, progress)
                     var result = self.mapDataOut(self.output, sweva.libs);
                     //validate output using provided schema
                     if (self.validateTypes('dataOut', result)) {
+                        if(self.needsReloadingVisualization === true) {
+                            self.manager.sendDataToVisualization(result);
+                        }
                         resolve(result);
                     }
                     else {

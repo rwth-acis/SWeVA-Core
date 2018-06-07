@@ -1,6 +1,7 @@
 ﻿'use strict';
 
 var Composable = require('../../core/composables/composable.js');
+//var Composition = require('../../core/composables/composition.js');
 var DefinitionError = require('../../core/errors/definitionError.js');
 var ExecutionError = require('../../core/errors/ExecutionError.js');
 
@@ -161,20 +162,29 @@ Module.prototype.callService = function (request, input) {
  * @param subscribe
  * @param input
  */
-Module.prototype.callSubscription = function(subscribe, data, input) {
+Module.prototype.callSubscription = function(subscribe, data, mqtt_sweva_parameters, input) {
   var self = this;
 
   return new Promise(function(resolve, reject) {
-    var client = subscribe;
-    client.on('connect', function() { self.onConnect(client, input, sweva.libs); });
-    if (self.lastReturnedData === null) {
-      self.lastReturnedData = data;
+    if(subscribe !== false){
+      var client = subscribe;
+      mqtt_sweva_parameters.data.client = client;
+      client.on('connect', function() { self.onConnect(client, input, sweva.libs); });
+      if (self.lastReturnedData === null) {
+        self.lastReturnedData = data;
+      }
+      client.on('message', function(topic, message) {
+        if(mqtt_sweva_parameters != false) {
+          self.mqtt_sweva_parameters = mqtt_sweva_parameters;
+        } else {
+          reject(error);
+        }
+        self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message, sweva.libs);
+        // now notify the execution manager
+        self.manager.onModuleUpdate(self);
+      });
     }
-    client.on('message', function(topic, message) {
-      self.lastReturnedData = self.onMessageReceived(self.lastReturnedData, topic, message, sweva.libs);
-      // now notify the execution manager
-      self.manager.onModuleUpdate(self, self.lastReturnedData); //TODO: add some key to uniquely identify module
-    });
+
 
     resolve(self.onSubscription(data, input, sweva.libs)).catch(function(error) {
         // if we have a function to deal with errors from service directly...
@@ -195,7 +205,7 @@ Module.prototype.callSubscription = function(subscribe, data, input) {
  * @param {string} [alias] - Name, under which the composable is known to its parent.
  * @param {function} [progress] - Callback for progress tracking, gets called every time a module finishes execution.
  */
-Module.prototype.execute = function (data, input, context, alias, progress) {
+Module.prototype.execute = function (data, input, context, alias, mqtt_sweva_parameters, progress) {
   var self = this;
   context = this.getNewContext(context, alias);
 
@@ -222,8 +232,13 @@ Module.prototype.execute = function (data, input, context, alias, progress) {
 
       } else if (typeof self.subscribe === 'function') {
         // this is subscribing to an asynchronous message queue
-
-        self.callSubscription(self.subscribe(data, input, sweva.libs), data, input).then(function(output) {
+        var client;
+        if(typeof mqtt_sweva_parameters.data.client === 'undefined') {
+          client = self.subscribe(data, input, sweva.libs);
+        } else {
+          client = false;
+        }
+        self.callSubscription(client, data, mqtt_sweva_parameters, input).then(function(output) {
           //validate output
           if (self.validateTypes('dataOut', output)) {
             //report progress, if callback is defined
