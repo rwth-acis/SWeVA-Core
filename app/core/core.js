@@ -30,6 +30,8 @@ globalObject.sweva.ErrorManager = new ErrorManager();
 var SwevaScript = require('../../app/core/swevaScript/swevaScript.js');
 globalObject.sweva.SwevaScript = new SwevaScript();
 
+var AssemblyScript = require('../../app/core/runners/assemblyScript.js');
+
 globalObject.sweva.libs = {
     axios: globalObject.sweva.axios,
     mqtt: globalObject.sweva.asyncmqtt,
@@ -38,6 +40,10 @@ globalObject.sweva.libs = {
     //mqttclient: globalObject.sweva.SwevaScript.client,
     //mqttsubscribe: globalObject.sweva.SwevaScript.subscribe,
     adddata: globalObject.sweva.SwevaScript.adddata
+}
+
+globalObject.sweva.runners = {
+    typescript: new AssemblyScript()
 }
 
 

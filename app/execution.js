@@ -751,7 +751,7 @@ var mqttComposition = {
 var now = Date.now();
 var manager = new sweva.ExecutionManager();
 console.log("starting...");
-manager.setup(mqttComposition);
+manager.setup(simpleHTTPRequest);
 manager.onProgress(function (progress) {
   console.log(progress);
 });
