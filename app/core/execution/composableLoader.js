@@ -77,21 +77,21 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     var self = this;
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
-            //reconstruct functions from string
-            if (typeof json[key][0] === 'string') {
-                var str = new String(json[key][0]);
-                //check if string array starts with 'function' -> assemble function into object
-                if (str.trim().indexOf('function') == 0) {
-                    //first sanitize the script to prevent malicious code execution
-                    
-                    json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
-                        function (error) {
-                            sweva.ErrorManager.error(
-                              new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
-                              context, self.convertJsonToCode(json)));
-                        });
-                }
-            }
+            //TODO: check if string array starts with 'function' -> assemble function into object
+            /*//reconstruct functions from string
+           if (typeof json[key][0] === 'string') {
+               var str = new String(json[key][0]);
+              if (str.trim().indexOf('function') == 0) {
+                   //first sanitize the script to prevent malicious code execution
+
+                   json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
+                       function (error) {
+                           sweva.ErrorManager.error(
+                             new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
+                             context, self.convertJsonToCode(json)));
+                       });
+               }
+            }*/
 
             if (typeof json[key] === 'object') {
                 json[key] = this.convertToObject(json[key], context);

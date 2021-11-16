@@ -15,7 +15,7 @@ function Runner() {
     /**
     * Determines, if dependencies are loaded.
     * @name ExecutionManager#modulesTotal
-    * @type {number}
+    * @type {boolean}
     */
     this.setupCompleted = false;
 }
@@ -23,11 +23,16 @@ function Runner() {
 /**
  * Run the provided binary or source code
  * @param {module} module - module containing source code/binary to run
- * 
+ *
  * @abstract
  */
- Runner.prototype.exec = function (module) {
- }
+Runner.prototype.exec = function (module) {
+}
+
+/**
+ * End user friendly Name
+ */
+Runner.prototype.name = "Abstract Runner"
    
 /**
  * Loads dependencies and should set setupCompleted to true, when done

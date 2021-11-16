@@ -1,5 +1,104 @@
 ﻿'use strict';
 
+var simpleAssemblyScriptPipeline = {
+  "type": "composition",
+    "name": "composition1",
+    "dataInNames": [],
+    "dataInSchema": {},
+  "dataOutNames": [
+  "result"
+],
+    "dataOutSchema": {},
+  "inputNames": [],
+    "inputSchema": {},
+  /*"mapDataIn": [
+  "function (data, composableName, composables, libs) {",
+  "if (data.hasOwnProperty(composableName)) {",
+  "return libs.get(data, composableName);",
+  "}",
+  "return null;",
+  "}"
+],
+    "mapDataOut": [
+  "function (output, libs) {",
+  "return output;",
+  "}"
+],
+    "mapInput": [
+  "function (input, moduleName, modules, libs) {",
+  "if (input.hasOwnProperty(moduleName)) {",
+  "return libs.get(input, moduleName);",
+  "}",
+  "return null;",
+  "}"
+],*/
+    "composables": {
+  "Node1": {
+    "type": "module",
+        "name": "module1",
+        "description": "A simple module template.",
+        "dataInNames": [
+      "in"
+    ],
+        "dataInSchema": {},
+    "dataOutNames": [
+      "result"
+    ],
+        "dataOutSchema": {},
+    "inputNames": [],
+        "inputSchema": {},
+    "source": [
+      "export function run(n: i32): i32 {",
+      "var a = 0, b = 1",
+      "if (n > 0) {",
+      "while (--n) {",
+      "let t = a + b",
+      "a = b ",
+      "b = t ",
+      "}",
+      "return b",
+      " }",
+      "return a ",
+      " }"
+    ]
+  },
+  "Node2": {
+    "type": "module",
+        "name": "module2",
+        "description": "A simple module template.",
+        "dataInNames": [
+      "in"
+    ],
+        "dataInSchema": {},
+    "dataOutNames": [
+      "result"
+    ],
+        "dataOutSchema": {},
+    "inputNames": [],
+        "inputSchema": {},
+    "source": [
+      "export function run(n: string): string {",
+      "return n.substr(3);",
+      "}"
+    ]
+  }
+},
+  "links": {
+  "Node1": {
+    "result": {
+      "Node2": "in"
+    }
+  }
+},
+  "controls": [
+  {
+    "label": "Section1",
+    "controls": []
+  }
+],
+    "visualization": ""
+};
+
 var simpleHTTPRequest = {
   "type": "composition",
   "name": "composition1",
@@ -750,7 +849,7 @@ var mqttComposition = {
 
 var now = Date.now();
 var manager = new sweva.ExecutionManager();
-console.log("starting...");
+/*console.log("starting...");
 manager.setup(simpleHTTPRequest);
 manager.onProgress(function (progress) {
   console.log(progress);
@@ -766,3 +865,4 @@ manager.execute({}, {
     console.log(result);
   });
 
+*/

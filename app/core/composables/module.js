@@ -91,35 +91,28 @@ function Module(initializationObject, manager) {
 
   this.initialize(initializationObject);
 
-  // compute node type
+  // general node type
 
-  this.initializeFunction(initializationObject, 'compute', 3, null);
+  this.initializeFunction(initializationObject, 'run', 3, null);
 
-  // synchronous request node type
+  this.initializeProperty(initializationObject, 'language', 'typescript');
+  this.initializeProperty(initializationObject, 'code', null);
+  this.initializeProperty(initializationObject, 'binary', null);
 
-  this.initializeFunction(initializationObject, 'request', 3,
-    function (data, input, libs) {
-      return new Promise(function (resolve, reject) {
-        resolve(0);
-      });
-    });
-  this.initializeFunction(initializationObject, 'requestError', 3, null);
+  /*this.initializeFunction(initializationObject, 'requestError', 3, null);
 
   this.initializeFunction(initializationObject, 'response', 3,
     function (response, input, libs) {
       var obj = {};
       obj[this.dataOutNames[0]] = response.data;
       return obj;
-    });
+    });*/
 
   // now the asynchronous node type
 
   this.initializeFunction(initializationObject, 'subscribe', 3, null);
-
   this.initializeFunction(initializationObject, 'onConnect', 3, null);
-
   this.initializeFunction(initializationObject, 'onSubscription', 3, null);
-
   this.initializeFunction(initializationObject, 'onMessageReceived', 4, null);
 }
 //inherit properties
@@ -217,19 +210,23 @@ Module.prototype.execute = function (data, input, context, alias, mqtt_sweva_par
     //only execute, if data and input objects are valid according to the optional schamas
     if (self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
 
-      if (typeof self.compute === 'function') {
+      console.log(self);
+      if (self.source != null) { //TODO: typeof self.run === 'function') {
         // if a computation function is defined, then skip service calls and compute locally
-        var result = self.compute(data, input, sweva.libs);
-        if (self.validateTypes('dataOut', result)) {
-          //report progress, if callback is defined
-          if (typeof progress !== 'undefined') {
-            progress(alias, self.name, context);
+        console.log("EXECUTE "+self.name+" USING: "+sweva.runners[self.language].name);
+        console.log(sweva.runners[self.language]);
+        sweva.runners[self.language].exec(self, input).then((result) => {
+          //var result = self.run(data, input, sweva.libs);
+          if (self.validateTypes('dataOut', result)) {
+            //report progress, if callback is defined
+            if (typeof progress !== 'undefined') {
+              progress(alias, self.name, context);
+            }
+            resolve(result);
+          } else {
+            reject(sweva.ErrorManager.getLastError());
           }
-          resolve(result);
-        } else {
-          reject(sweva.ErrorManager.getLastError());
-        }
-
+        });
       } else if (typeof self.subscribe === 'function') {
         // this is subscribing to an asynchronous message queue
         var client;

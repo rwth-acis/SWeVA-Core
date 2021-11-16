@@ -22,7 +22,7 @@ function Compiler() {
 
 /**
  * Compile the provided source code
- * @param {string} source - source code to compile
+ * @param {module} source - source code to compile
  */
  Compiler.prototype.compile = function (source) {
     return source;

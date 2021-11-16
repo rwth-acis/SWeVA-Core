@@ -815,7 +815,7 @@ Composition.prototype.composableQueueExecution = function (context) {
         //mark composable as cleared
         if (!this.unlcearedComposables[i].cleared) {
 
-            //Retrive Data nedded for the ASYNC calls of the MQTT nodes
+            //Retrieve Data needed for the ASYNC calls of the MQTT nodes
             //Check if the current node about to be cleared is an MQTT node
           var mqtt_sweva_parameters = false;
           if (typeof this.composables[this.unlcearedComposables[i].composable].subscribe === 'function'){

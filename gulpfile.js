@@ -11,16 +11,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 // Include Gulp & tools we'll use
 var gulp = require('gulp');
+var gulputil = require('gulp-util');
+var uglify = require('gulp-uglify-es').default;
 var $ = require('gulp-load-plugins')();
-var del = require('del');
-var runSequence = require('run-sequence');
+//var del = require('del');
+//var runSequence = require('run-sequence');
 var browserSync = require('browser-sync');
 var source = require('vinyl-source-stream');
+var buffer = require('vinyl-buffer');
 var reload = browserSync.reload;
 var browserify = require('browserify');
-var merge = require('merge-stream');
-var path = require('path');
-var fs = require('fs');
+//var merge = require('merge-stream');
+//var path = require('path');
+var sourcemaps = require('gulp-sourcemaps');
+//var fs = require('fs');
 var historyApiFallback = require('connect-history-api-fallback');
 var ext_replace = require('gulp-ext-replace');
 
@@ -70,27 +74,36 @@ var composableToJSON = function () {
 }
 
 // Lint JavaScript
-// gulp.task('jshint', function () {
-//     return gulp.src([
-//         'app/**/*.js',
-//         'app/**/*.html',
-//         'gulpfile.js'
-//     ])
-//       .pipe(reload({ stream: true, once: true }))
-//       .pipe($.jshint.extract()) // Extract JS from .html files
-//       .pipe($.jshint())
-//       .pipe($.jshint.reporter('jshint-stylish'))
-//       .pipe($.if(!browserSync.active, $.jshint.reporter('fail')));
-// });
+gulp.task('jshint', function () {
+    return gulp.src([
+        'app/**/*.js',
+        'app/**/*.html',
+        'gulpfile.js'
+    ])
+      .pipe(reload({ stream: true, once: true }))
+      .pipe($.jshint.extract()) // Extract JS from .html files
+      .pipe($.jshint())
+      .pipe($.jshint.reporter('jshint-stylish'))
+      .pipe($.if(!browserSync.active, $.jshint.reporter('fail')));
+});
 
 gulp.task('browserify', function () {
-    return browserify({
-        entries: [
-            './app/core/core.js'
-        ]
-    })
+    return browserify('./app/core/core.js', {
+                debug: true
+            }
+        )
     .bundle()
+    .on('error', function(err){
+        gulputil.log(gulputil.colors.red('Error'), err.message);
+        if(err.codeFrame)
+            console.log(err.codeFrame);
+        this.emit('end');
+    })
     .pipe(source('core.build.js'))
+    .pipe(buffer())
+    .pipe(sourcemaps.init({loadMaps: true}))
+    .pipe(uglify())
+    .pipe(sourcemaps.write('./'))
     .pipe(gulp.dest('./app/'))
     ;//.pipe(reload({ stream: true, once: true }));
 });
@@ -138,6 +151,8 @@ gulp.task('serve', [], function () {
     browserSync({
         port: 5001,
         notify: false,
+        open: false, //don't automatically open browser tab
+        reloadOnRestart: true,
         logPrefix: 'SWeVA',
         snippetOptions: {
             rule: {
@@ -159,22 +174,23 @@ gulp.task('serve', [], function () {
                     next();
                 }],
             routes: {
-                '/bower_components': 'bower_components'
+                '/bower_components': 'bower_components',
+                '/node_modules': 'node_modules'
             }
         }
     });
 
     gulp.watch(['app/**/*.html',
     'app/execution.js',
-    'app/examplesJSON/**/*.json'], reload);
+    'app/examplesJSON/**/*.json',
+    'app/core.build.js'], reload);
 
-    gulp.watch(['app/execution.js'], reload);
     gulp.watch(['app/examples/*.js'], ['composablesToJSON']);
     gulp.watch(['app/core/**/*.js'], ['browserify']);
 });
 
 // Build and serve the output from the dist build
-gulp.task('serve:dist', ['default'], function () {
+/*gulp.task('serve:dist', ['default'], function () {
     browserSync({
         port: 5001,
         notify: false,
@@ -194,7 +210,7 @@ gulp.task('serve:dist', ['default'], function () {
         server: 'dist',
         middleware: [historyApiFallback()]
     });
-});
+});*/
 
 // // Build production files, the default task
 // gulp.task('default', ['clean'], function (cb) {

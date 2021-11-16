@@ -30,7 +30,7 @@ globalObject.sweva.ErrorManager = new ErrorManager();
 var SwevaScript = require('../../app/core/swevaScript/swevaScript.js');
 globalObject.sweva.SwevaScript = new SwevaScript();
 
-var AssemblyScript = require('../../app/core/runners/assemblyScript.js');
+var AssemblyScriptRunner = require('../../app/core/runners/assemblyScriptRunner.js');
 
 globalObject.sweva.libs = {
     axios: globalObject.sweva.axios,
@@ -43,7 +43,7 @@ globalObject.sweva.libs = {
 }
 
 globalObject.sweva.runners = {
-    typescript: new AssemblyScript()
+    typescript: new AssemblyScriptRunner()
 }
 
 

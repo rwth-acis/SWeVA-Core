@@ -5,26 +5,64 @@
     <title>Core test page</title>
     <script src="./core.build.js"></script>
     <script src="./execution.js"></script>
+    <script src="/node_modules/requirejs/require.js"></script>
 </head>
 
 <body>
     <span id="browser-sync-binding"></span>
 
     Press the button, to run a simple test
-    <button onclick="clickbutton()">clickme</button>
+    <button onclick="click()">clickme</button>
 
     <script>
 
         let ts = sweva.runners.typescript;
-        let tsModule = {
+        let tsModule1 = {
             type: 'module',
-            name: 'add',    
-            code: ""
+            name: 'add',
+            code: "",
+            //create base64 uint8: btoa(String.fromCharCode.apply(null, uint8array))
+            binary: new Uint8Array(atob(
+                "AGFzbQEAAAABGgVgAX8Bf2AAAGAEf39/fwBgAn9/AX9gAX8AAg0BA2VudgVhYm9ydAACAwcGAAMABAEBBQMBAAEGDAJ/AUEAC38AQZAJCwdFBwR0ZXN0AAEFX19uZXcAAgVfX3BpbgADB19fdW5waW4ABAlfX2NvbGxlY3QABQtfX3J0dGlfYmFzZQMBBm1lbW9yeQIACAEGCpYCBjMBA39BASEBIABBAEoEQANAIABBAWsiAARAIAEgAmohAyABIQIgAyEBDAELCyABDwtBAAvKAQEGfyAAQez///8DSwRAQaAIQeAIQdYAQR4QAAALIABBEGoiB0H8////A0sEQEGgCEHgCEEhQR0QAAALIwAiBUEEaiICIAdBE2pBcHFBBGsiBGoiBj8AIgdBEHRBD2pBcHEiA0sEQCAHIAYgA2tB//8DakGAgHxxQRB2IgMgAyAHSBtAAEEASARAIANAAEEASARAAAsLCyAGJAAgBSAENgIAIAIiA0EEayIHQQA2AgQgB0EANgIIIAcgATYCDCAHIAA2AhAgA0EQagsEACAACwMAAQsDAAELBwBBrAkkAAsLggEFAEGMCAsBPABBmAgLLwEAAAAoAAAAQQBsAGwAbwBjAGEAdABpAG8AbgAgAHQAbwBvACAAbABhAHIAZwBlAEHMCAsBPABB2AgLJQEAAAAeAAAAfgBsAGkAYgAvAHIAdAAvAHMAdAB1AGIALgB0AHMAQZAJCw0DAAAAIAAAAAAAAAAgAH0QYXMtYmluZF9iaW5kaW5nc3sidHlwZUlkcyI6e30sImltcG9ydGVkRnVuY3Rpb25zIjp7fSwiZXhwb3J0ZWRGdW5jdGlvbnMiOnsidGVzdCI6eyJyZXR1cm5UeXBlIjoiaTMyIiwicGFyYW1ldGVycyI6WyJpMzIiXX19fQ=="
+            ).split("").map(function(c) {
+                return c.charCodeAt(0); }))
+        };
+        let tsModule2 = {
+            type: 'module',
+            name: 'substr',
+            source: "export function test(pos: i32): string {\n" +
+                "\n" +
+                "    return \"hallo123\".substr(pos);\n" +
+                "  }\n"
         };
 
-        console.log(ts.exec(tsModule));
 
-        function clickbutton(event) {
+        console.log("Precompiled module:");
+        ts.exec(tsModule1, 10).then(function(res) {
+            console.log(res);
+
+
+            console.log("Uncompiled module:");
+            ts.exec(tsModule2, 3).then(function(res) {
+                console.log(res);
+            });
+        });
+
+        //full pipeline test
+        manager.setup(simpleAssemblyScriptPipeline);
+        manager.onProgress(function (progress) {
+            console.log(progress);
+        });
+        manager.execute({}, {
+            "Filter1": {
+                "minRating": 1
+            }
+        }).then(function (result) {
+            console.log('time ' + (Date.now() - now) + 'ms');
+            console.log(result);
+        });
+
+        function click(event) {
 
             var now = Date.now();
             manager.execute({
