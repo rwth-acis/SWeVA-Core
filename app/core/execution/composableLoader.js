@@ -77,21 +77,12 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     var self = this;
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
-            //TODO: check if string array starts with 'function' -> assemble function into object
-            /*//reconstruct functions from string
-           if (typeof json[key][0] === 'string') {
-               var str = new String(json[key][0]);
-              if (str.trim().indexOf('function') == 0) {
-                   //first sanitize the script to prevent malicious code execution
-
-                   json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
-                       function (error) {
-                           sweva.ErrorManager.error(
-                             new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
-                             context, self.convertJsonToCode(json)));
-                       });
-               }
-            }*/
+           //decode base64 encoded binaries
+            if(key === 'binary') {
+               json[key] = new Uint8Array(atob(json[key]).split("").map(function(c) {
+                   return c.charCodeAt(0);
+               }));
+            }
 
             if (typeof json[key] === 'object') {
                 json[key] = this.convertToObject(json[key], context);
@@ -101,12 +92,14 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
 
     return result;
 }
+//TODO: replace default modules
 ComposableLoader.prototype.getDefaultModule = function () {
     return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n        return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return { result:response.data }\n    }    \n}";
 }
 ComposableLoader.prototype.getDefaultComposition = function () {
     return "{\n    type: \'composition\',\n    name: \'composition1\',\n    dataInNames: [],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: [],\n    inputSchema: {},\n    mapDataIn: function (data, composableName, composables, libs) {\n        if (data.hasOwnProperty(composableName)) {\n            return libs.get(data, composableName);\n        }\n        return null;\n    },\n    mapDataOut: function (output, libs) {\n        return output;\n    },\n    mapInput: function (input, moduleName, modules, libs) {\n        if (input.hasOwnProperty(moduleName)) {\n            return libs.get(input, moduleName);\n        }\n        return null;\n    }\n}";
 }
+
 ComposableLoader.prototype.convertCodeToJson = function (string) {
     
     var result = ''

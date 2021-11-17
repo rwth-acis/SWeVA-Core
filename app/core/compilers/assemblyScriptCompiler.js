@@ -54,6 +54,7 @@ AssemblyScriptCompiler.prototype.setup = async function () {
 AssemblyScriptCompiler.prototype.compile = async function (module) {
     var self = this;
 
+    //load compiler
     await this.setup()
 
     return new Promise((resolve) => {
@@ -72,7 +73,8 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
             stderr,
             transforms: [self.asbind],
             readFile(name, baseDir) {
-                return name === "module.ts" ? module.source : null;
+                var sourceStr = module.source.join("\n");
+                return name === "module.ts" ? sourceStr : null;
             },
             writeFile(name, data, baseDir) {
                 console.log("WRITE " + name + " (" + data.length + " Bytes)");

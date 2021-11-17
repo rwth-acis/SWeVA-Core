@@ -841,7 +841,8 @@ Composition.prototype.composableQueueExecution = function (context) {
             //execute composable
             this.composables[composableName].execute(data, input, context, composableName, mqtt_sweva_parameters, this.progress)
                 .then(
-                func(composableName))
+                    //a => console.log(a))
+                    func(composableName))
                 .catch(function (error) {
                     //error is logged earlier, but how to handle?
                 });

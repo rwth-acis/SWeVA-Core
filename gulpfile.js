@@ -102,7 +102,7 @@ gulp.task('browserify', function () {
     .pipe(source('core.build.js'))
     .pipe(buffer())
     .pipe(sourcemaps.init({loadMaps: true}))
-    .pipe(uglify())
+    //.pipe(uglify())
     .pipe(sourcemaps.write('./'))
     .pipe(gulp.dest('./app/'))
     ;//.pipe(reload({ stream: true, once: true }));
@@ -181,7 +181,7 @@ gulp.task('serve', [], function () {
     });
 
     gulp.watch(['app/**/*.html',
-    'app/execution.js',
+    'app/examplePipelines.js',
     'app/examplesJSON/**/*.json',
     'app/core.build.js'], reload);
 

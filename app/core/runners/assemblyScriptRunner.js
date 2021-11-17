@@ -27,9 +27,10 @@ AssemblyScriptRunner.prototype.setup = function () {
     this.setupCompleted = true;
 }
 
-AssemblyScriptRunner.prototype.exec = async function (module, input) {
+AssemblyScriptRunner.prototype.exec = async function (module, data, input) {
+    console.log("EXEC");
     console.log(module);
-    console.log(input);
+    console.log(data);
     var updateIO = false;
 
     if(!module.binary || module.binary.length === 0){
@@ -42,8 +43,14 @@ AssemblyScriptRunner.prototype.exec = async function (module, input) {
     //if(updateIO)
         //createDataSchema(module, asBindInstance);
 
-    //console.log(asBindInstance);
-    return asBindInstance.exports.test(input);
+    var dataS;
+    for(var key in data) {
+        dataS = data[key];
+    }
+
+    var result = asBindInstance.exports.run(dataS);
+    console.log(result);
+    return result;
 }
 
 AssemblyScriptRunner.prototype.createDataSchema = function (module) {

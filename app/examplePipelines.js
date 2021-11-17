@@ -77,8 +77,8 @@ var simpleAssemblyScriptPipeline = {
     "inputNames": [],
         "inputSchema": {},
     "source": [
-      "export function run(n: string): string {",
-      "return n.substr(3);",
+      "export function run(n: i32): i32 {",
+      "return n*2;",
       "}"
     ]
   }
@@ -846,23 +846,3 @@ var mqttComposition = {
   "visualization": "sweva-visualization-raw/dist/sweva-visualization-raw.min.html"
 };
 
-
-var now = Date.now();
-var manager = new sweva.ExecutionManager();
-/*console.log("starting...");
-manager.setup(simpleHTTPRequest);
-manager.onProgress(function (progress) {
-  console.log(progress);
-});
-
-
-manager.execute({}, {
-    "Filter1": {
-      "minRating": 1
-    }
-  }).then(function (result) {
-    console.log('time ' + (Date.now() - now) + 'ms');
-    console.log(result);
-  });
-
-*/
