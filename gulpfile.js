@@ -10,30 +10,29 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 'use strict';
 
 // Include Gulp & tools we'll use
-var gulp = require('gulp');
-var gulputil = require('gulp-util');
-var uglify = require('gulp-uglify-es').default;
-var $ = require('gulp-load-plugins')();
-//var del = require('del');
-//var runSequence = require('run-sequence');
-var browserSync = require('browser-sync');
-var source = require('vinyl-source-stream');
-var buffer = require('vinyl-buffer');
-var reload = browserSync.reload;
-var browserify = require('browserify');
-//var merge = require('merge-stream');
-//var path = require('path');
-var sourcemaps = require('gulp-sourcemaps');
-//var fs = require('fs');
-var historyApiFallback = require('connect-history-api-fallback');
-var ext_replace = require('gulp-ext-replace');
+const gulp = require('gulp');
+const gulp_util = require('gulp-util');
+const uglify = require('gulp-uglify-es').default;
+const $ = require('gulp-load-plugins')();
+const rename = require('gulp-rename');
+const filter = require('gulp-filter');
+const browserSync = require('browser-sync').create();
+const source = require('vinyl-source-stream');
+const buffer = require('vinyl-buffer');
+const browserify = require('browserify');
+const sourcemaps = require('gulp-sourcemaps');
+const historyApiFallback = require('connect-history-api-fallback');
+const ext_replace = require('gulp-ext-replace');
+const through = require('through2');
+const PluginError = require('plugin-error');
+const shell = require('gulp-shell');
+const del = require('del');
 
-var shell = require('gulp-shell');
-
-
-var through = require('through2');
-var log = require('fancy-log');
-var PluginError = require('plugin-error');
+//const fs = require('fs');
+//const merge = require('merge-stream');
+//const path = require('path');
+//const runSequence = require('run-sequence');
+//const log = require('fancy-log');
 
 function prefixStream(prefixText) {
     var stream = through();
@@ -48,15 +47,14 @@ var composableToJSON = function () {
             return cb(null, file);
         }
         if (file.isBuffer()) {
-            var fileContents = new String(file.contents) + '';
+            var fileContents = String(file.contents) + '';
             //we now have the relevent object
             var resultObj = new Function('return' + fileContents)();
 
             for (var key in resultObj) {
                 if (resultObj.hasOwnProperty(key)) {
                     if (typeof resultObj[key] === 'function') {
-                        var funcStringArray = resultObj[key].toString().match(/[^\r\n]+/g);
-                        resultObj[key] = funcStringArray;
+                        resultObj[key] = resultObj[key].toString().match(/[^\r\n]+/g);
                     }
                 }
             }
@@ -87,25 +85,40 @@ gulp.task('jshint', function () {
       .pipe($.if(!browserSync.active, $.jshint.reporter('fail')));
 });
 
+
+// gulp.task('docs', shell.task([
+//     './node_modules/.bin/jsdoc app/core/ -r -R README.md -d docs -t ./node_modules/ink-docstrap/template -c jsdocConfig.json'
+// ]));
+
+// Clean output directory
+gulp.task('clean', function (cb) {
+    del(['dist'], cb);
+});
+
 gulp.task('browserify', function () {
     return browserify('./app/core/core.js', {
                 debug: true
             }
         )
-    .bundle()
-    .on('error', function(err){
-        gulputil.log(gulputil.colors.red('Error'), err.message);
-        if(err.codeFrame)
-            console.log(err.codeFrame);
-        this.emit('end');
-    })
-    .pipe(source('core.build.js'))
-    .pipe(buffer())
-    .pipe(sourcemaps.init({loadMaps: true}))
-    //.pipe(uglify())
-    .pipe(sourcemaps.write('./'))
-    .pipe(gulp.dest('./app/'))
-    ;//.pipe(reload({ stream: true, once: true }));
+        .bundle()
+        .on('error', function(err){
+            gulp_util.log(gulp_util.colors.red('Error'), err.message);
+            if(err.codeFrame)
+                console.log(err.codeFrame);
+            this.emit('end');
+        })
+        .pipe(source('core.build.js'))
+        .pipe(buffer())
+        .pipe(sourcemaps.init({loadMaps: true}))
+        .pipe(sourcemaps.write('./'))
+        .pipe(gulp.dest('./dist/'));
+});
+gulp.task('minify', function () {
+    return gulp.src('./dist/core.build.js')
+        .pipe(buffer())
+        .pipe(uglify())
+        .pipe(rename({ suffix: '.min' }))
+        .pipe(gulp.dest('./dist/'));
 });
 gulp.task('composablesToJSON', function () {
     return gulp.src(['app/examples/*.js'])
@@ -132,23 +145,16 @@ gulp.task('composablesToJSON', function () {
 //       .pipe($.size({ title: 'copy' }));
 // });
 //
-// // Clean output directory
-// gulp.task('clean', function (cb) {
-//     del(['.tmp', 'dist'], cb);
-// });
-// gulp.task('uglify', [], function () {
-//     return gulp.src(['app/core.build.js'])
-//        .pipe($.uglify().on('error', function(){ log('Error...'); }))
-//        .pipe(gulp.dest('app/'));
-// });
-//
-// gulp.task('docs', shell.task([
-//   './node_modules/.bin/jsdoc app/core/ -r -R README.md -d docs -t ./node_modules/ink-docstrap/template -c jsdocConfig.json'
-// ]));
+
 
 // Watch files for changes & reload
-gulp.task('serve', [], function () {
-    browserSync({
+gulp.task('serve', gulp.series('browserify', 'minify', function () {
+    function reloadWrapper(done) {
+        browserSync.reload();
+        done();
+    }
+
+    browserSync.init({
         port: 5001,
         notify: false,
         open: false, //don't automatically open browser tab
@@ -167,7 +173,7 @@ gulp.task('serve', [], function () {
         //       will present a certificate warning in the browser.
         // https: true,
         server: {
-            baseDir: ['.tmp', 'app'],
+            baseDir: ['dist', 'app'],
             middleware: [historyApiFallback(),
                 function (req, res, next) {
                     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -182,12 +188,12 @@ gulp.task('serve', [], function () {
 
     gulp.watch(['app/**/*.html',
     'app/examplePipelines.js',
-    'app/examplesJSON/**/*.json',
-    'app/core.build.js'], reload);
+    'app/examplesJSON/**/*.json',], reloadWrapper);
 
-    gulp.watch(['app/examples/*.js'], ['composablesToJSON']);
-    gulp.watch(['app/core/**/*.js'], ['browserify']);
-});
+    gulp.watch(['app/examples/*.js'], gulp.series('composablesToJSON'));
+    //reload before minifying, because gulp-uglify is slow and not needed for dev
+    gulp.watch(['app/core/**/*.js'], gulp.series('browserify', reloadWrapper, 'minify'));
+}));
 
 // Build and serve the output from the dist build
 /*gulp.task('serve:dist', ['default'], function () {
@@ -212,13 +218,7 @@ gulp.task('serve', [], function () {
     });
 });*/
 
-// // Build production files, the default task
-// gulp.task('default', ['clean'], function (cb) {
-//     // Uncomment 'cache-config' after 'rename-index' if you are going to use service workers.
-//     runSequence(
-//       ['copy', 'styles'],
-//       'elements',
-//       ['jshint', 'images', 'fonts', 'html'],
-//       'vulcanize', 'rename-index', // 'cache-config',
-//       cb);
-// });
+// Build production files, the default task
+gulp.task('default', gulp.series('clean', 'browserify', 'minify', async function() {
+    gulp_util.log('Info', 'core.build.min.js is available in /dist\nRun task \'serve\' to start a webserver for development.');
+}));

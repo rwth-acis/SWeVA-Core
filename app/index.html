@@ -3,7 +3,7 @@
 
 <head>
     <title>Core test page</title>
-    <script src="./core.build.js"></script>
+    <script src="../core.build.js"></script>
     <script src="./examplePipelines.js"></script>
     <script src="/node_modules/requirejs/require.js"></script>
 </head>
@@ -19,50 +19,60 @@
         var manager = new sweva.ExecutionManager();
 
         async function runTests() {
-            //await testModules()
+            //await testPrecompiledModule()
+            //await testSourceModule()
             await testPipeLine1()
             //await testPipeline2()
         }
 
-        async function testModules() {
+        async function testPrecompiledModule() {
             console.log("Starting Test of Modules");
-            let ts = sweva.runners.typescript;
+            console.log("Precompiled module:");
             let tsModule1 = {
                 type: 'module',
                 name: 'add',
                 code: "",
+                dataInNames: ["a", "b"],
+                inputNames: [],
+                outputNames: ["out"],
                 //create base64 uint8: btoa(String.fromCharCode.apply(null, uint8array))
                 binary: new Uint8Array(atob(
-                    "AGFzbQEAAAABGgVgAX8Bf2AAAGAEf39/fwBgAn9/AX9gAX8AAg0BA2VudgVhYm9ydAACAwcGAAMABAEBBQMBAAEGDAJ/AUEAC38" +
-                    "AQZAJCwdFBwR0ZXN0AAEFX19uZXcAAgVfX3BpbgADB19fdW5waW4ABAlfX2NvbGxlY3QABQtfX3J0dGlfYmFzZQMBBm1lbW9yeQ" +
-                    "IACAEGCpYCBjMBA39BASEBIABBAEoEQANAIABBAWsiAARAIAEgAmohAyABIQIgAyEBDAELCyABDwtBAAvKAQEGfyAAQez///8DS" +
-                    "wRAQaAIQeAIQdYAQR4QAAALIABBEGoiB0H8////A0sEQEGgCEHgCEEhQR0QAAALIwAiBUEEaiICIAdBE2pBcHFBBGsiBGoiBj8A" +
-                    "IgdBEHRBD2pBcHEiA0sEQCAHIAYgA2tB//8DakGAgHxxQRB2IgMgAyAHSBtAAEEASARAIANAAEEASARAAAsLCyAGJAAgBSAENgI" +
-                    "AIAIiA0EEayIHQQA2AgQgB0EANgIIIAcgATYCDCAHIAA2AhAgA0EQagsEACAACwMAAQsDAAELBwBBrAkkAAsLggEFAEGMCAsBPA" +
-                    "BBmAgLLwEAAAAoAAAAQQBsAGwAbwBjAGEAdABpAG8AbgAgAHQAbwBvACAAbABhAHIAZwBlAEHMCAsBPABB2AgLJQEAAAAeAAAAf" +
-                    "gBsAGkAYgAvAHIAdAAvAHMAdAB1AGIALgB0AHMAQZAJCw0DAAAAIAAAAAAAAAAgAH0QYXMtYmluZF9iaW5kaW5nc3sidHlwZUlk" +
-                    "cyI6e30sImltcG9ydGVkRnVuY3Rpb25zIjp7fSwiZXhwb3J0ZWRGdW5jdGlvbnMiOnsidGVzdCI6eyJyZXR1cm5UeXBlIjoiaTM" +
-                    "yIiwicGFyYW1ldGVycyI6WyJpMzIiXX19fQ=="
-                ).split("").map(function(c) {
-                    return c.charCodeAt(0); }))
+                    "AGFzbQEAAAABGgVgAn9/AX9gAABgBH9/f38AYAF/AX9gAX8AAg0BA2VudgVhYm9ydAACAwcGAAADBAEBBAQBcAABBQMBAAEGDAJ" +
+                    "/AUEAC38AQZAJCwdMCANydW4AAQVfX25ldwACBV9fcGluAAMHX191bnBpbgAECV9fY29sbGVjdAAFC19fcnR0aV9iYXNlAwEGbW" +
+                    "Vtb3J5AgAFdGFibGUBAAgBBgroAQYHACAAIAFqC8gBAQZ/IABB7P///wNLBEBBoAhB4AhB1gBBHhAAAAsgAEEQaiIEQfz///8DS" +
+                    "wRAQaAIQeAIQSFBHRAAAAsjACIDQQRqIgIgBEETakFwcUEEayIEaiIFPwAiBkEQdEEPakFwcSIHSwRAIAYgBSAHa0H//wNqQYCA" +
+                    "fHFBEHYiByAGIAdKG0AAQQBIBEAgB0AAQQBIBEAACwsLIAUkACADIAQ2AgAgAkEEayIDQQA2AgQgA0EANgIIIAMgATYCDCADIAA" +
+                    "2AhAgAkEQagsEACAACwMAAQsDAAELBwBBrAkkAAsLggEFAEGMCAsBPABBmAgLLwEAAAAoAAAAQQBsAGwAbwBjAGEAdABpAG8Abg" +
+                    "AgAHQAbwBvACAAbABhAHIAZwBlAEHMCAsBPABB2AgLJQEAAAAeAAAAfgBsAGkAYgAvAHIAdAAvAHMAdAB1AGIALgB0AHMAQZAJC" +
+                    "w0DAAAAIAAAAAAAAAAgAIIBEGFzLWJpbmRfYmluZGluZ3N7InR5cGVJZHMiOnt9LCJpbXBvcnRlZEZ1bmN0aW9ucyI6e30sImV4" +
+                    "cG9ydGVkRnVuY3Rpb25zIjp7InJ1biI6eyJyZXR1cm5UeXBlIjoiaTMyIiwicGFyYW1ldGVycyI6WyJpMzIiLCJpMzIiXX19fQ=="
+                ).split("").map(function (c) {
+                    return c.charCodeAt(0);
+                }))
             };
+            var res1 = await sweva.runners.typescript.exec(tsModule1, {a: 5, b: 15});
+            console.log("Result: "+res1);
+        }
+
+        async function testSourceModule() {
             let tsModule2 = {
                 type: 'module',
                 name: 'substr',
-                source: "export function test(pos: i32): string {\n" +
-                    "\n" +
-                    "    return \"hallo123\".substr(pos);\n" +
-                    "  }\n"
+                source: [
+                    "export var testvar1:i32 = 7888;",
+                    "export var testvar8:i8[] = [1,2,3];",
+                    "export var testvar32:i32[] = [1,2,300];",
+                    "export var testvar3:string[] = [\"a\",\"b\",\"c\"];",
+                    "export function z(a: i32): i32 {",
+                    "return 1; }\n",
+                    "export function run(pos: i32,b: string[]): string {",
+                    "    return b[pos];",
+                    "  }"]
             };
 
-            console.log("Precompiled module:");
-            var res1 = await ts.exec(tsModule1, 10);
-            console.log(res1);
-
-
             console.log("Uncompiled module:");
-            var res2 = await ts.exec(tsModule2, 3);
-            console.log(res2);
+            var res2 = await sweva.runners.typescript.exec(tsModule2, {pos: 3, b: ["a1", "b2", "b3", "b4"]}, {});
+            console.log("Result: "+res2);
         }
 
         async function testPipeLine1() {
@@ -74,9 +84,9 @@
             });
             manager.execute({
                     "Node1": {
-                        "in": 8
+                        "num": 8
                     }
-                }, 4).then(function (result) {
+                }, {}).then(function (result) {
                 console.log('time ' + (Date.now() - now) + 'ms');
                 console.log(result);
             });

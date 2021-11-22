@@ -38,7 +38,7 @@ var simpleAssemblyScriptPipeline = {
         "name": "module1",
         "description": "A simple module template.",
         "dataInNames": [
-      "in"
+      "num"
     ],
         "dataInSchema": {},
     "dataOutNames": [
@@ -48,10 +48,10 @@ var simpleAssemblyScriptPipeline = {
     "inputNames": [],
         "inputSchema": {},
     "source": [
-      "export function run(n: i32): i32 {",
+      "export function run(num: i32): i32 {",
       "var a = 0, b = 1",
-      "if (n > 0) {",
-      "while (--n) {",
+      "if (num > 0) {",
+      "while (--num) {",
       "let t = a + b",
       "a = b ",
       "b = t ",
@@ -67,7 +67,7 @@ var simpleAssemblyScriptPipeline = {
         "name": "module2",
         "description": "A simple module template.",
         "dataInNames": [
-      "in"
+      "num"
     ],
         "dataInSchema": {},
     "dataOutNames": [
@@ -77,8 +77,8 @@ var simpleAssemblyScriptPipeline = {
     "inputNames": [],
         "inputSchema": {},
     "source": [
-      "export function run(n: i32): i32 {",
-      "return n*2;",
+      "export function run(num: i32): i32 {",
+      "return num*2;",
       "}"
     ]
   }
@@ -86,7 +86,7 @@ var simpleAssemblyScriptPipeline = {
   "links": {
   "Node1": {
     "result": {
-      "Node2": "in"
+      "Node2": "num"
     }
   }
 },
