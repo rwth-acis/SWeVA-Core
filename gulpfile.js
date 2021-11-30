@@ -182,7 +182,8 @@ gulp.task('serve', gulp.series('browserify', 'minify', function () {
                 }],
             routes: {
                 '/bower_components': 'bower_components',
-                '/node_modules': 'node_modules'
+                '/node_modules': 'node_modules',
+                '/node_modules/sweva-core/app/core/compilers': 'app/core/compilers'    //allows using WebWorker with same path in core framework index.html as in UI
             }
         }
     });
