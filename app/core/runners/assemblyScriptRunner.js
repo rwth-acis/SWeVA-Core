@@ -6,6 +6,7 @@ var Compiler = require('../../core/compilers/assemblyScriptCompiler.js');
 var Composable = require('../../core/composables/composable.js');
 var ExecutionError = require('../../core/errors/ExecutionError.js');
 var DefinitionError = require('../../core/errors/ExecutionError.js');
+var SupportLibrary = require('../../core/execution/supportLibrary.js');
 
 /**
  * Parameters in the AssemblyScript run function starting with this string are used for the user inputs.
@@ -20,48 +21,146 @@ const userInputSeparator = "input_";
  *
  */
 function AssemblyScriptRunner() {
-    this.compiler = new Compiler();
+    this.supportLib = new SupportLibrary();
+    this.supportLib.loadHTTP();
+    this.supportLib.loadTestSync();
+    this.compiler = new Compiler(this.supportLib);
 }
 
 //inherit properties
 AssemblyScriptRunner.prototype = Object.create(Runner.prototype);
 AssemblyScriptRunner.prototype.constructor = AssemblyScriptRunner;
 
-AssemblyScriptRunner.prototype.name = "TypeScript (using AssemblyScript)"
+AssemblyScriptRunner.prototype.name = "TypeScript (using AssemblyScript)";
+AssemblyScriptRunner.prototype.id = "typescript";
 
-AssemblyScriptRunner.prototype.setup = function () {
-    this.setupCompleted = true;
-}
 
-AssemblyScriptRunner.prototype.exec = async function (module, data, input) {
-    console.log("EXEC");
-    console.log(data);
-    var definitionData = null;
+AssemblyScriptRunner.prototype.prepare = async function(module, callbackList = []) {
+    let definitionData = null;
 
-    if(!module.binary || module.binary.length === 0){
+    if(!module.binary || module.binary.length === 0 || module.binaryHash !== this.calculateBinaryHash(module.binary)){
+        module.binaryHash = null;
         let compilerResult = await this.compiler.compile(module);
         module.binary = compilerResult.binaryData;
+        module.binaryHash = this.calculateBinaryHash(module.binary);
         definitionData = compilerResult.definitionData;
     }
 
-    const moduleInstance = await AsBind.instantiate(module.binary);
+    const moduleInstance = await AsBind.instantiate(module.binary, {
+        module: this.generateFunctionDescription(callbackList)
+    });
 
     if(definitionData != null)
-        createDataSchema(module, moduleInstance, definitionData);
+        this.createDataSchema(module, moduleInstance, definitionData);
 
-    console.log(module);
+    return moduleInstance;
+}
+
+/**
+ *  wrapper for
+ */
+AssemblyScriptRunner.prototype.generateFunctionDescription = function(callbackList){
+    let functions = {};
+
+    for(let funcName in this.supportLib.functions) {
+        let funcDesc = this.supportLib.functions[funcName];
+        let functionReference;
+
+        if(funcDesc.async) {
+             //params has callback name as first argument followed by regular parameters
+             functionReference = function (...params) {
+                let callbackName = params[0];
+                params.shift();
+
+                callbackList.push({
+                    promise: funcDesc.func(...params),
+                    params: params,
+                    funcName: funcName,
+                    callbackName: callbackName
+                });
+            }
+        } else {
+            functionReference = funcDesc.func;
+        }
+
+        functions["lib."+funcName]  = functionReference;
+    }
+    return functions;
+}
+
+AssemblyScriptRunner.prototype.exec = async function (module, data, input) {
+    let callbackList = [];
+
+    //compile and update schema
+    let instance = await this.prepare(module, callbackList);
+
+    //console.log(module);
     let preparedParams = [];
     if(module.inputNames.length > 0)
-        preparedParams = preparedParams.concat(findParamAssignment(module.inputNames, input, module.context))
+        preparedParams = preparedParams.concat(this.findParamAssignment(module.inputNames, input, module.context))
     if(module.dataInNames.length > 0)
-        preparedParams = preparedParams.concat(findParamAssignment(module.dataInNames, data, module.context));
+        preparedParams = preparedParams.concat(this.findParamAssignment(module.dataInNames, data, module.context));
 
-    let result = moduleInstance.exports.run(...preparedParams);
-    console.log(result);
+    let returnValue = instance.exports.run(...preparedParams);
+
+    //finish executing all asynchronous functions
+    while(callbackList.length > 0) {
+        /*console.log("Remaining Callback: ");
+        console.log(callbackList[0]);*/
+        let result = null;
+        try{
+            result = await callbackList[0].promise;
+        } catch(err){
+            throw new ExecutionError("Error in support function "+callbackList[0].funcName+" with parameters "+callbackList[0].params+"!", module.context);
+        }
+        if(result !== null) {
+            let callbackDescriptor = instance.typeDescriptor.exportedFunctions[callbackList[0].callbackName];
+            if(!callbackDescriptor)
+                throw new DefinitionError("Callback function with name "+callbackList[0].callbackName+" not found!", module.context);
+
+            try{
+                if(callbackList[0].callbackName != null && callbackList[0].callbackName !== "") {
+                    //match number of parameters of callback
+                    let callbackParamCount = callbackDescriptor.parameters.length;
+                    let preparedResult = result.slice(0, callbackParamCount);
+                    //console.log(instance.typeDescriptor.exportedFunctions[callbackList[0].callbackName]);
+
+                    //Todo: do something with callback returns?
+                    let returnValue = instance.exports[callbackList[0].callbackName](...preparedResult);
+                    if(returnValue)
+                        console.log("Callback return: "+returnValue);
+                }
+            } catch (err) {
+                throw new ExecutionError("Error while calling callback function "+callbackList[0].callbackName+" with parameters '"+result+"'!", module.context);
+            }
+        }
+        callbackList.shift();
+    }
+
+    return this.collectOutputData(instance, returnValue);
+}
+
+AssemblyScriptRunner.prototype.collectOutputData = function(moduleInstance, returnValue) {
+    let result = {};
+
+    if(returnValue !== undefined) {
+        result.out = returnValue;
+    }
+
+    /*console.log(AsBind);
+    console.log(moduleInstance);
+    console.log(returnValue);*/
+
+    for(let exportedObj in moduleInstance.exports) {
+        if(moduleInstance.exports[exportedObj] instanceof WebAssembly.Global && !exportedObj.startsWith("__")) {
+            result[exportedObj] = moduleInstance.exports[this.compiler.internalGetterPrefix+exportedObj]();
+        }
+    }
+
     return result;
 }
 
-function findParamAssignment(names, values, context) {
+AssemblyScriptRunner.prototype.findParamAssignment = function(names, values, context) {
     let preparedParams = [];
     for(let i in names) {
         let matchFound = false;
@@ -79,54 +178,8 @@ function findParamAssignment(names, values, context) {
     return preparedParams;
 }
 
-function createDataSchema (module, moduleInstance, definitionData) {
-    let run = moduleInstance.typeDescriptor.exportedFunctions.run;
 
-    //verify entrypoint exists
-    if(run === undefined)
-        throw new DefinitionError("Missing entrypoint: exported function named run is required, as an entrypoint.", module.context);
-
-    //inputs
-    //parse variable names - replace if AssemblyScript API, to access parameter names becomes available
-    let paramNames = parseAssemblyScriptVariableNames(definitionData);
-
-    if(run.parameters.length !== paramNames.length)
-        throw new DefinitionError("Parameter length mismatch! Parameters could not be parsed fully!", module.context);
-
-    module.dataInNames = [];
-    module.inputNames = [];
-    module.dataInSchema = null;
-    module.inputSchema = null;
-
-    for(let i in run.parameters) {
-        if(paramNames[i].startsWith(userInputSeparator)) {
-            module.inputNames.push(paramNames[i]);
-
-            if(module.inputSchema == null)
-                module.inputSchema = {type: "object", properties: {}};
-            module.inputSchema.properties[paramNames[i]] = {type: run.parameters[i]};
-        } else {
-            module.dataInNames.push(paramNames[i]);
-
-            if(module.dataInSchema == null)
-                module.dataInSchema = {type: "object", properties: {}};
-            module.dataInSchema.properties[paramNames[i]] = {type: run.parameters[i]};
-        }
-    }
-
-    //outputs
-    console.log(moduleInstance);
-    module.dataOutNames = [];
-    module.dataOutSchema = null;
-    for(let exportedObj in moduleInstance.exports) {
-        if(moduleInstance.exports[exportedObj] instanceof WebAssembly.Global && !exportedObj.startsWith("__")) {
-            console.log(exportedObj);
-            module.dataOutNames.push(exportedObj);
-        }
-    }
-}
-
-function parseAssemblyScriptVariableNames(definitionData) {
+AssemblyScriptRunner.prototype.parseAssemblyScriptVariableNames = function(definitionData) {
     let paramNames = Array();
     let lines = definitionData.split("\n");
     for(let line in lines) {
@@ -141,5 +194,56 @@ function parseAssemblyScriptVariableNames(definitionData) {
     }
     return paramNames;
 }
+
+AssemblyScriptRunner.prototype.createDataSchema = function (module, moduleInstance, definitionData) {
+    let run = moduleInstance.typeDescriptor.exportedFunctions.run;
+
+    //verify entrypoint exists
+    if(run === undefined)
+        throw new DefinitionError("Missing entrypoint: exported function named run is required, as an entrypoint.", module.context);
+
+    //inputs
+    //parse parameter names of run function - replace, if AssemblyScript API, to access parameter names becomes available
+    let paramNames = this.parseAssemblyScriptVariableNames(definitionData);
+
+    if(run.parameters.length !== paramNames.length)
+        throw new DefinitionError("Parameter length mismatch! Parameters could not be parsed fully!", module.context);
+
+    module.dataInNames = [];
+    module.inputNames = [];
+    module.dataInSchema = {type: "object", properties: {}};
+    module.inputSchema = {type: "object", properties: {}};
+
+    for(let i in run.parameters) {
+        if(paramNames[i].startsWith(userInputSeparator)) {
+            module.inputNames.push(paramNames[i]);
+
+            module.inputSchema.properties[paramNames[i]] = {type: run.parameters[i]};
+        } else {
+            module.dataInNames.push(paramNames[i]);
+
+            module.dataInSchema.properties[paramNames[i]] = {type: run.parameters[i]};
+        }
+    }
+
+    //outputs
+    module.dataOutNames = [];
+    module.dataOutSchema = {type: "object", properties: {}};
+    for(let exportedObj in moduleInstance.exports) {
+        if(moduleInstance.exports[exportedObj] instanceof WebAssembly.Global && !exportedObj.startsWith("__")) {
+            module.dataOutNames.push(exportedObj);
+            module.dataOutSchema.properties[exportedObj] = {type: moduleInstance.typeDescriptor.exportedFunctions[this.compiler.internalGetterPrefix+exportedObj]}
+        }
+    }
+    if(run.returnType !== 'void') {
+        if(!module.dataOutNames.includes('out')) {
+            module.dataOutNames.push('out');
+            module.dataOutSchema.properties['out'] = {type: run.returnType}
+        } else {
+            throw new DefinitionError("Duplicate parameter called 'out'! Do not use 'out' as a name for exported variables!", module.context);
+        }
+    }
+}
+
 
 module.exports = AssemblyScriptRunner;

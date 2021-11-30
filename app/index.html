@@ -19,22 +19,24 @@
         var manager = new sweva.ExecutionManager();
 
         async function runTests() {
-            //await testPrecompiledModule()
-            //await testSourceModule()
+            await testPrecompiledModule()
+            await testSourceModule()
+            await testHttpRequest()
             await testPipeLine1()
-            //await testPipeline2()
+            await testPipeline2()
         }
 
         async function testPrecompiledModule() {
-            console.log("Starting Test of Modules");
+            console.log("\n\n--- Starting test of precompiled module ---");
             console.log("Precompiled module:");
             let tsModule1 = {
                 type: 'module',
                 name: 'add',
-                code: "",
+                source: [],
                 dataInNames: ["a", "b"],
                 inputNames: [],
                 outputNames: ["out"],
+                binaryHash: -10343611935,
                 //create base64 uint8: btoa(String.fromCharCode.apply(null, uint8array))
                 binary: new Uint8Array(atob(
                     "AGFzbQEAAAABGgVgAn9/AX9gAABgBH9/f38AYAF/AX9gAX8AAg0BA2VudgVhYm9ydAACAwcGAAADBAEBBAQBcAABBQMBAAEGDAJ" +
@@ -50,64 +52,86 @@
                     return c.charCodeAt(0);
                 }))
             };
-            var res1 = await sweva.runners.typescript.exec(tsModule1, {a: 5, b: 15});
-            console.log("Result: "+res1);
+            var res = await sweva.runners.typescript.exec(tsModule1, {a: 5, b: 15});
+            console.log("Result: ");
+            console.log(res);
         }
 
         async function testSourceModule() {
+            console.log("\n\n--- Starting test of source only module ---");
             let tsModule2 = {
                 type: 'module',
                 name: 'substr',
                 source: [
-                    "export var testvar1:i32 = 7888;",
-                    "export var testvar8:i8[] = [1,2,3];",
-                    "export var testvar32:i32[] = [1,2,300];",
-                    "export var testvar3:string[] = [\"a\",\"b\",\"c\"];",
+                    "export var testvar1:i8 = 0;",
+                    "export var testvar8 : i8[] = [1,2,3];",
+                    "export var testvar32: i32[] = [1,2,300];",
+                    "export var testvar3 :string[][] = [[\"a\",\"b\",\"c\"]];",
                     "export function z(a: i32): i32 {",
                     "return 1; }\n",
                     "export function run(pos: i32,b: string[]): string {",
+                    "    testvar1 = 3",
+                    "    testvar8.push(5)",
                     "    return b[pos];",
                     "  }"]
             };
 
-            console.log("Uncompiled module:");
-            var res2 = await sweva.runners.typescript.exec(tsModule2, {pos: 3, b: ["a1", "b2", "b3", "b4"]}, {});
-            console.log("Result: "+res2);
+            var res = await sweva.runners.typescript.exec(tsModule2, {pos: 3, b: ["a1", "b2", "b3", "b4"]}, {});
+            console.log("Result: ");
+            console.log(res);
+        }
+        async function testHttpRequest() {
+            console.log("\n\n--- Starting test of support library ---");
+            let tsModule2 = {
+                type: 'module',
+                name: 'http_request',
+                source: [
+                    "export var response:string = \"\";",
+                    "export function httpRes(a: string): void {",
+                    "response = a",
+                    "}\n",
+                    "export function run(): string {",
+                    "lib.httpRequest('httpRes', 'https://ip.zuim.de/raw/');",
+                    "return lib.test('TestStr');",
+                    "  }"]
+            };
+
+            var res2 = await sweva.runners.typescript.exec(tsModule2, {}, {});
+            console.log("Result: ");
+            console.log(res2);
         }
 
         async function testPipeLine1() {
-            console.log("Starting Pipeline 1");
+            console.log("\n\n--- Starting test of pipeline 1 ---");
             var now = Date.now();
             manager.setup(simpleAssemblyScriptPipeline);
             manager.onProgress(function (progress) {
                 console.log(progress+"%");
             });
-            manager.execute({
+            let res = await manager.execute({
                     "Node1": {
                         "num": 8
                     }
-                }, {}).then(function (result) {
-                console.log('time ' + (Date.now() - now) + 'ms');
-                console.log(result);
-            });
+                }, {});
+
+            console.log('time ' + (Date.now() - now) + 'ms');
+            console.log(res);
         }
 
         async function testPipeline2() {
-            console.log("Starting Pipeline 2");
+            console.log("\n\n--- Starting test of pipeline 2 ---");
             var now = Date.now();
-            manager.setup(simpleHTTPRequest);
+            manager.setup(simpleAssemblyScriptPipeline2);
             manager.onProgress(function (progress) {
-              console.log(progress);
+              console.log("Progress: "+progress+"%");
             });
 
-            manager.execute({}, {
-                "Filter1": {
-                  "minRating": 1
-                }
-              }).then(function (result) {
-                console.log('time ' + (Date.now() - now) + 'ms');
-                console.log(result);
-              });
+            let res = await manager.execute({
+                "Node1": {
+                    "num": 8
+                }}, {});
+            console.log('time ' + (Date.now() - now) + 'ms');
+            console.log(res);
         }
 
 

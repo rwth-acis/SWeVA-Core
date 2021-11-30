@@ -762,8 +762,6 @@ Composition.prototype.composableQueueExecution = function (context) {
                 }
                 //if composable provides data to other composables 
                 else {
-                   
-                    
                     if (self.links[composableName]) {
 
                         for (var fromEndpoint in self.links[composableName]) {
@@ -778,9 +776,6 @@ Composition.prototype.composableQueueExecution = function (context) {
                             }
                         }                            
                     }
-                    
-                    
-                    
                 }
                 //recursive execution of the next composables, as this one just finished and probably resolved some data dependencies
                 //console.log(self.parameters)

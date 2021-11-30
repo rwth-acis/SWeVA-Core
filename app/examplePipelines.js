@@ -2,15 +2,15 @@
 
 var simpleAssemblyScriptPipeline = {
   "type": "composition",
-    "name": "composition1",
-    "dataInNames": [],
-    "dataInSchema": {},
+  "name": "composition1",
+  "dataInNames": [],
+  "dataInSchema": {},
   "dataOutNames": [
-  "result"
-],
-    "dataOutSchema": {},
+    "result"
+  ],
+  "dataOutSchema": {},
   "inputNames": [],
-    "inputSchema": {},
+  "inputSchema": {},
   /*"mapDataIn": [
   "function (data, composableName, composables, libs) {",
   "if (data.hasOwnProperty(composableName)) {",
@@ -32,71 +32,176 @@ var simpleAssemblyScriptPipeline = {
   "return null;",
   "}"
 ],*/
-    "composables": {
-  "Node1": {
-    "type": "module",
-        "name": "module1",
-        "description": "A simple module template.",
-        "dataInNames": [
-      "num"
-    ],
-        "dataInSchema": {},
-    "dataOutNames": [
-      "result"
-    ],
-        "dataOutSchema": {},
-    "inputNames": [],
-        "inputSchema": {},
-    "source": [
-      "export function run(num: i32): i32 {",
-      "var a = 0, b = 1",
-      "if (num > 0) {",
-      "while (--num) {",
-      "let t = a + b",
-      "a = b ",
-      "b = t ",
-      "}",
-      "return b",
-      " }",
-      "return a ",
-      " }"
-    ]
-  },
-  "Node2": {
-    "type": "module",
-        "name": "module2",
-        "description": "A simple module template.",
-        "dataInNames": [
-      "num"
-    ],
-        "dataInSchema": {},
-    "dataOutNames": [
-      "result"
-    ],
-        "dataOutSchema": {},
-    "inputNames": [],
-        "inputSchema": {},
-    "source": [
-      "export function run(num: i32): i32 {",
-      "return num*2;",
-      "}"
-    ]
-  }
-},
-  "links": {
-  "Node1": {
-    "result": {
-      "Node2": "num"
+  "composables": {
+    "Node1": {
+      "type": "module",
+      "name": "module1",
+      "description": "A simple module template.",
+      "dataInNames": [
+        "num"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export function run(num: i32): i32 {",
+        "var a = 0, b = 1",
+        "if (num > 0) {",
+        "while (--num) {",
+        "let t = a + b",
+        "a = b ",
+        "b = t ",
+        "}",
+        "return b",
+        " }",
+        "return a ",
+        " }"
+      ]
+    },
+    "Node2": {
+      "type": "module",
+      "name": "module2",
+      "description": "A simple module template.",
+      "dataInNames": [
+        "num"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export function run(num: i32): i32 {",
+        "return num*2;",
+        "}"
+      ]
     }
-  }
-},
+  },
+  "links": {
+    "Node1": {
+      "out": {
+        "Node2": "num"
+      }
+    }
+  },
   "controls": [
-  {
-    "label": "Section1",
-    "controls": []
-  }
+    {
+      "label": "Section1",
+      "controls": []
+    }
+  ],
+  "visualization": ""
+};
+var simpleAssemblyScriptPipeline2 = {
+  "type": "composition",
+  "name": "composition1",
+  "dataInNames": [],
+  "dataInSchema": {},
+  "dataOutNames": [
+    "result"
+  ],
+  "dataOutSchema": {},
+  "inputNames": [],
+  "inputSchema": {},
+  /*"mapDataIn": [
+  "function (data, composableName, composables, libs) {",
+  "if (data.hasOwnProperty(composableName)) {",
+  "return libs.get(data, composableName);",
+  "}",
+  "return null;",
+  "}"
 ],
-    "visualization": ""
+    "mapDataOut": [
+  "function (output, libs) {",
+  "return output;",
+  "}"
+],
+    "mapInput": [
+  "function (input, moduleName, modules, libs) {",
+  "if (input.hasOwnProperty(moduleName)) {",
+  "return libs.get(input, moduleName);",
+  "}",
+  "return null;",
+  "}"
+],*/
+  "composables": {
+    "Node1": {
+      "type": "module",
+      "name": "module1",
+      "description": "A simple module template.",
+      "dataInNames": [
+        "num"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export function run(num: i32): i32 {",
+        "var a = 0, b = 1",
+        "if (num > 0) {",
+        "while (--num) {",
+        "let t = a + b",
+        "a = b ",
+        "b = t ",
+        "}",
+        "return b",
+        " }",
+        "return a ",
+        " }"
+      ]
+    },
+    "Node2": {
+      "type": "module",
+      "name": "module2",
+      "description": "A simple module template.",
+      "dataInNames": [
+        "num"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export var testvar32:i32 = 7888;",
+        "export var testvarArr8:i8[] = [1,2,3];",
+        "export var testvarArr32:i32[] = [1,2,300];",
+        "export var testvarArrArr32:i32[][] = [[1,2,3],[4,5,6]];",
+        "export var testvarArrFl:f32[] = [1.3,2.2,300.3];",
+        "export var testvarArrStr:string[] = [\"a\",\"b\",\"c\"];",
+        "export function run(num: i32): i32 {",
+          "testvar32 = num;"+
+          "return num;",
+        "}"
+      ]
+    }
+  },
+  "links": {
+    "Node1": {
+      "out": {
+        "Node2": "num"
+      }
+    }
+  },
+  "controls": [
+    {
+      "label": "Section1",
+      "controls": []
+    }
+  ],
+  "visualization": ""
 };
 
 var simpleHTTPRequest = {

@@ -13,7 +13,7 @@ catch (e) {
 
 globalObject.sweva = {};
 
-globalObject.sweva.axios = require('../../bower_components/axios/dist/axios.min.js');
+globalObject.sweva.axios = require('../../node_modules/axios/dist/axios.min.js');
 globalObject.sweva.asyncmqtt = require('../../node_modules/async-mqtt');
 
 var Ajv = require('../../node_modules/ajv/lib/ajv.js');
@@ -32,6 +32,7 @@ globalObject.sweva.SwevaScript = new SwevaScript();
 
 var AssemblyScriptRunner = require('../../app/core/runners/assemblyScriptRunner.js');
 
+/*
 globalObject.sweva.libs = {
     axios: globalObject.sweva.axios,
     mqtt: globalObject.sweva.asyncmqtt,
@@ -40,12 +41,9 @@ globalObject.sweva.libs = {
     //mqttclient: globalObject.sweva.SwevaScript.client,
     //mqttsubscribe: globalObject.sweva.SwevaScript.subscribe,
     adddata: globalObject.sweva.SwevaScript.adddata
-}
+}*/
 
-globalObject.sweva.runners = {
-    typescript: new AssemblyScriptRunner()
-}
+globalObject.sweva.runners = {};
 
-
-
-
+var typescript = new AssemblyScriptRunner();
+globalObject.sweva.runners[typescript.id] = typescript;

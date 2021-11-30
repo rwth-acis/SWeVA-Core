@@ -23,34 +23,66 @@ function Runner() {
 /**
  * Run the provided binary or source code
  * @param {module} module - module containing source code/binary to run
+ * @param {Object} data - data passed to the processing node
+ * @param {Object} input - inputs passed to the processing node
  *
  * @abstract
  */
-Runner.prototype.exec = function (module) {
+Runner.prototype.exec = function (module, data, input) {
+}
+
+/**
+ * Prepare the provided module for execution:
+ * - compile, if not already compiled
+ * - update references to binary/hash
+ * - update data schemes
+ * This is also used to validate new source code while editing
+ *
+ * @param {module} module - module containing source code/binary to run
+ * @return {Object} instance ready to execute
+ * @throws CompileError
+ *
+ * @abstract
+ */
+Runner.prototype.prepare = function (module) {
 }
 
 /**
  * End user friendly Name
  */
 Runner.prototype.name = "Abstract Runner"
-   
+
 /**
- * Loads dependencies and should set setupCompleted to true, when done
- * 
- * @abstract
+ * ID used internally, to identify runners
  */
- Runner.prototype.setup = function () {
- }
+Runner.prototype.name = "abstract_runner"
+
+
+/**
+ * Calculates Hash used to compare binaries
+ *
+ * @param {Uint8Array} binary - binary to hash
+ * @return hash
+ *
+ */
+Runner.prototype.calculateBinaryHash = function (binary) {
+    let hash = 0;
+    for(let i in binary) {
+        hash = ((hash << 8)-hash)+binary[i];
+    }
+    return hash;
+}
 
 /**
  * Determine data schema based on source/binary and write results to the module
  * The properties dataInSchema, dataOutSchema, inputSchema, dataInNames, dataOutNames, inputNames of the module can be written
- * 
+ * Called automatically, when new source is compiled, but can be used to manually regenerate data schema
+ *
  * @param {module} module - module containing source code/binary
- * 
+ *
  * @abstract
  */
- Runner.prototype.createDataSchema = function (module) {
- }
+Runner.prototype.createDataSchema = function (module) {
+}
 
 module.exports = Runner

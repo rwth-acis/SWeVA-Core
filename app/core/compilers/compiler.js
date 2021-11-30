@@ -8,33 +8,44 @@
  * Additionally the setup should only be called, when the compiler is needed, because some dependencies for compiling can be very large
  * 
  * This is a default implementation, returning the input source as the compiled code. It can be used for interpreted languages.
- * 
+ *
+ * @param {SupportLibrary} supportLibrary - source code to compile
  * @constructor
  */
-function Compiler() {
+function Compiler(supportLibrary) {
     /**
-    * Determines, if dependencies are loaded.
-    * @name Compiler#setupCompleted
-    * @type {boolean}
-    */
+     * Determines, if dependencies are loaded.
+     * @name Compiler#setupCompleted
+     * @type {boolean}
+     */
     this.setupCompleted = false;
+
+    /**
+     * Documentation for functions in support library - should include specifics on language syntax
+     * Available after Compiler#setup() has been called.
+     * @name Compiler#setupCompleted
+     * @type {string}
+     */
+    this.supportLibraryDocumentation = "";
 }
 
 /**
  * Compile the provided source code
  * @param {module} source - source code to compile
+ * @return {object} containing binaryData and optionally other properties of specific compilers
  */
- Compiler.prototype.compile = function (source) {
+Compiler.prototype.compile = function (source) {
     return source;
- }
+}
    
 /**
  * Loads dependencies
  */
- Compiler.prototype.setup = async function () {
-     if(!this.setupCompleted) {
-         this.setupCompleted = true;
-     }
+Compiler.prototype.setup = async function () {
+    if(!this.setupCompleted) {
+        this.setupCompleted = true;
+    }
 }
+
 
 module.exports = Compiler

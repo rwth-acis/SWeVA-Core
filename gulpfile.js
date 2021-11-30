@@ -160,6 +160,7 @@ gulp.task('serve', gulp.series('browserify', 'minify', function () {
         open: false, //don't automatically open browser tab
         reloadOnRestart: true,
         logPrefix: 'SWeVA',
+        ui: false,
         snippetOptions: {
             rule: {
                 match: '<span id="browser-sync-binding"></span>',

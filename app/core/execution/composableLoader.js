@@ -1,5 +1,4 @@
 ﻿'use strict';
-//var axios = require('../../../bower_components/axios/dist/axios.min.js');
 
 var Module = require('../../core/composables/module.js');
 var Composition = require('../../core/composables/composition.js');
@@ -82,6 +81,22 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                json[key] = new Uint8Array(atob(json[key]).split("").map(function(c) {
                    return c.charCodeAt(0);
                }));
+            }
+
+            //TODO: consider removing mapping functions
+            if (key !== 'source' && typeof json[key][0] === 'string') {
+                var str = String(json[key][0]);
+                //check if string array starts with 'function' -> assemble function into object
+                if (str.trim().indexOf('function') === 0) {
+                    //first sanitize the script to prevent malicious code execution
+
+                    json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
+                        function (error) {
+                            sweva.ErrorManager.error(
+                                new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
+                                    context, self.convertJsonToCode(json)));
+                        });
+                }
             }
 
             if (typeof json[key] === 'object') {

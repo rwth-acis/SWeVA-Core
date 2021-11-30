@@ -98,6 +98,7 @@ function Module(initializationObject, manager) {
   this.initializeProperty(initializationObject, 'language', 'typescript');
   this.initializeProperty(initializationObject, 'source', null);
   this.initializeProperty(initializationObject, 'binary', null);
+  this.initializeProperty(initializationObject, 'binaryHash', null);
 
   /*this.initializeFunction(initializationObject, 'requestError', 3, null);
 
@@ -210,15 +211,13 @@ Module.prototype.execute = function (data, input, context, alias, mqtt_sweva_par
     //only execute, if data and input objects are valid according to the optional schamas
     if (self.validateTypes('dataIn', data) && self.validateTypes('input', input)) {
 
-      console.log(self);
+      console.log(data);
       if (self.source != null) { //TODO: typeof self.run === 'function') {
         // if a computation function is defined, then skip service calls and compute locally
         console.log("EXECUTE "+self.name+" USING: "+sweva.runners[self.language].name);
-        console.log(sweva.runners[self.language]);
-        sweva.runners[self.language].exec(self, data).then((result) => {
+        sweva.runners[self.language].exec(self, data, input).then((result) => {
 
           //TODO: MAP correctly
-          result = {result: result};
           //var result = self.run(data, input, sweva.libs);
           if (self.validateTypes('dataOut', result)) {
             //report progress, if callback is defined
