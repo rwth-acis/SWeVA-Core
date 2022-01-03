@@ -77,8 +77,13 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
            //decode base64 encoded binaries
-            if(key === 'binary') {
-               json[key] = new Uint8Array(atob(json[key]).split("").map(function(c) {
+            if(key === 'binary' && !(json[key] instanceof Uint8Array)) {
+                /*console.log(json)
+                console.log(context)
+                console.log(json[key]);
+                console.log(typeof json[key])*/
+                let binaryList = atob(json[key]);
+               json[key] = new Uint8Array(binaryList.split("").map(function(c) {
                    return c.charCodeAt(0);
                }));
             }
@@ -98,6 +103,22 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
                         });
                 }
             }
+
+            /*//TODO: consider removing mapping functions
+            if (key !== 'source' && typeof json[key][0] === 'string') {
+                var str = String(json[key][0]);
+                //check if string array starts with 'function' -> assemble function into object
+                if (str.trim().indexOf('function') === 0) {
+                    //first sanitize the script to prevent malicious code execution
+
+                    json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
+                        function (error) {
+                            sweva.ErrorManager.error(
+                                new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
+                                    context, self.convertJsonToCode(json)));
+                        });
+                }
+            }*/
 
             if (typeof json[key] === 'object') {
                 json[key] = this.convertToObject(json[key], context);

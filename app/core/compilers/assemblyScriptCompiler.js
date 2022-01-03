@@ -4,16 +4,15 @@
 //var AsBind = require('../../../node_modules/as-bind/dist/as-bind.cjs.js');
 //var AsBindTransform = require('../../../node_modules/as-bind/dist/transform.cjs');
 var Runner = require('../../core/runners/runner.js');
-var Compiler = require('../../core/compilers/compiler.js')
+var Compiler = require('../../core/compilers/compiler.js');
 var AsBind = require('../../../node_modules/as-bind/dist/as-bind.cjs.js');
 var Composable = require('../../core/composables/composable.js');
 var ExecutionError = require('../../core/errors/ExecutionError.js');
-var CompileError = require('../../core/errors/CompileError.js');
+var CompileError = require('../../core/errors/compileError.js');
 const DefinitionError = require("../../core/errors/ExecutionError.js");
 //var AssemblyScriptGetterTransform = require('./assemblyScriptGetterTransform.js');
 
-/** include Web_Worker library for Nodejs **/
-var Worker = Worker || require('../../../node_modules/web-worker/cjs/node');
+/** include web-worker library for Nodejs **/
 
 console.log(Worker);
 
@@ -102,7 +101,7 @@ AssemblyScriptCompiler.prototype.setup = async function () {
 }
 
 AssemblyScriptCompiler.prototype.initWorker = function() {
-    if(typeof this.worker != 'undefined') {
+    if(typeof this.worker != 'undefined' && this.worker != null) {
         this.worker.terminate();
     }
 
@@ -114,8 +113,14 @@ AssemblyScriptCompiler.prototype.initWorker = function() {
     }
 }
 
+
+
 AssemblyScriptCompiler.prototype.compile = async function (module) {
     const self = this;
+    while(this.currentlyCompiling) {
+        await new Promise(resolveWait => setTimeout(resolveWait, 1));
+    }
+    this.currentlyCompiling = true;
 
     //load compiler
     await this.setup()
@@ -123,6 +128,7 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
     let doneCompiling = false;
     new Promise(resolve => setTimeout(resolve, 10000)).then(() => {
         if(!doneCompiling) {
+            this.currentlyCompiling = false;
             this.initWorker();
             throw new CompileError("Compilation Timeout", module.context);
         }
@@ -130,9 +136,12 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
 
     let workerResult = await new Promise((resolve) => {
         this.resolveCompile = resolve;
-        this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
         doneCompiling = true;
+        this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
     });
+
+    this.currentlyCompiling = false;
+
 
     this.resolveCompile = null;
 

@@ -17,10 +17,15 @@ SupportLibrary.prototype.loadTestSync = function() {
             typescript: {
                 parameterSig: "url: string",
                 returnSig: "string"
-            }},
+            }
+        },
         func: function (url) {
-            return url+url;
-        }};
+            return url + url;
+        }
+    };
+}
+
+SupportLibrary.prototype.loadLogger = function() {
     this.functions.log = {
         description: "Log the text to the browser console",
         async: false,

@@ -20,7 +20,12 @@ gulp serve
 ```
 
 The `gulp serve` makes sure, that every time you change something in the core.js, it gets browserfied into the
-core.build.js which is served to the browser. 
+core.build.js which is served to the browser.
+
+The server component can be started using:
+```sh
+node server.js
+```
 
 ### Documentation
 

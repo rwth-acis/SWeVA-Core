@@ -180,10 +180,10 @@ var simpleAssemblyScriptPipeline2 = {
         "export var testvarArr32:i32[] = [1,2,300];",
         "export var testvarArrArr32:i32[][] = [[1,2,3],[4,5,6]];",
         "export var testvarArrFl:f32[] = [1.3,2.2,300.3];",
-        "export var testvarArrStr:string[] = [\"a\",\"b\",\"c\"];",
+        "export var testvarArrStr:string[] = [\"String test a\",\"test b\",\"test c\"];",
         "export function run(num: i32): i32 {",
-          "testvar32 = num;"+
-          "return num;",
+        "testvar32 = num;"+
+        "return num;",
         "}"
       ]
     }
@@ -192,6 +192,136 @@ var simpleAssemblyScriptPipeline2 = {
     "Node1": {
       "out": {
         "Node2": "num"
+      }
+    }
+  },
+  "controls": [
+    {
+      "label": "Section1",
+      "controls": []
+    }
+  ],
+  "visualization": ""
+};
+
+var simpleAssemblyScriptPipeline3 = {
+  "type": "composition",
+  "name": "composition1",
+  "dataInNames": [],
+  "dataInSchema": {},
+  "dataOutNames": [
+    "result"
+  ],
+  "dataOutSchema": {},
+  "inputNames": [],
+  "inputSchema": {},
+  "composables": {
+    "Node_start": {
+      "type": "module",
+      "name": "module1",
+      "dataInNames": [
+        "num"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export function run(num: i32): i32 {",
+        "var a = 0, b = 1",
+        "if (num > 0) {",
+        "while (--num) {",
+        "let t = a + b",
+        "a = b ",
+        "b = t ",
+        "}",
+        "return b",
+        " }",
+        "return a ",
+        " }"
+      ]
+    },
+    "Node_mid1": {
+      "type": "module",
+      "name": "module2",
+      "description": "A simple module template.",
+      "dataInNames": [
+        "num"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export function run(num: i32): i32 {",
+            "return num * 2;",
+        "}"
+      ]
+    },
+
+    "Node_mid2": {
+      "type": "module",
+      "name": "module3",
+      "dataInNames": [
+        "num"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export function run(num: i32): i32 {",
+        "return num*3;",
+        "}"
+      ]
+    },
+
+    "Node_end": {
+      "type": "module",
+      "name": "module4",
+      "description": "A simple module template.",
+      "dataInNames": [
+        "num1",
+        "num2"
+      ],
+      "dataInSchema": {},
+      "dataOutNames": [
+        "out"
+      ],
+      "dataOutSchema": {},
+      "inputNames": [],
+      "inputSchema": {},
+      "source": [
+        "export function run(num1: i32, num2: i32): i32 {",
+        "return num1-num2;",
+        "}"
+      ]
+    }
+  },
+  "links": {
+    "Node_start": {
+      "out": {
+        "Node_mid1": "num",
+        "Node_mid2": "num"
+      }
+    },
+    "Node_mid1": {
+      "out": {
+        "Node_end": "num1"
+      }
+    },
+    "Node_mid2": {
+      "out": {
+        "Node_end": "num2"
       }
     }
   },
@@ -951,3 +1081,6 @@ var mqttComposition = {
   "visualization": "sweva-visualization-raw/dist/sweva-visualization-raw.min.html"
 };
 
+if(typeof module !== 'undefined'){
+  module.exports = {simpleAssemblyScriptPipeline, simpleAssemblyScriptPipeline2, simpleAssemblyScriptPipeline3};
+}

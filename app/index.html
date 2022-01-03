@@ -23,6 +23,7 @@
             await testHttpRequest()
             await testPipeLine1()
             await testPipeline2()
+            await testPipeline3()
         }
 
         async function testPrecompiledModule() {
@@ -101,7 +102,7 @@
         }
 
         async function testPipeLine1() {
-            console.log("\n\n--- Starting test of pipeline 1 ---");
+            console.log("\n\n--- Starting test of pipeline 1 (linked nodes)---");
             var now = Date.now();
             manager.setup(simpleAssemblyScriptPipeline);
             manager.onProgress(function (progress) {
@@ -118,16 +119,32 @@
         }
 
         async function testPipeline2() {
-            console.log("\n\n--- Starting test of pipeline 2 ---");
+            console.log("\n\n--- Starting test of pipeline 2 (exported results)---");
             var now = Date.now();
             manager.setup(simpleAssemblyScriptPipeline2);
             manager.onProgress(function (progress) {
-              console.log("Progress: "+progress+"%");
+                console.log("Progress: "+progress+"%");
             });
 
             let res = await manager.execute({
                 "Node1": {
                     "num": 8
+                }}, {});
+            console.log('time ' + (Date.now() - now) + 'ms');
+            console.log(res);
+        }
+
+        async function testPipeline3() {
+            console.log("\n\n--- Starting test of pipeline 3 (branching)---");
+            var now = Date.now();
+            manager.setup(simpleAssemblyScriptPipeline3);
+            manager.onProgress(function (progress) {
+                console.log("Progress: "+progress+"%");
+            });
+
+            let res = await manager.execute({
+                "Node_start": {
+                    "num": 7
                 }}, {});
             console.log('time ' + (Date.now() - now) + 'ms');
             console.log(res);

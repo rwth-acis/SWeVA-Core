@@ -12,6 +12,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 // Include Gulp & tools we'll use
 const gulp = require('gulp');
 const gulp_util = require('gulp-util');
+const replace = require('gulp-replace');
 const uglify = require('gulp-uglify-es').default;
 const $ = require('gulp-load-plugins')();
 const rename = require('gulp-rename');
@@ -101,6 +102,7 @@ gulp.task('browserify', function () {
             }
         )
         .ignore('web-worker') //this is a nodejs module and only loaded for nodejs
+        .ignore('requirejs')
         .bundle()
         .on('error', function(err){
             gulp_util.log(gulp_util.colors.red('Error'), err.message);
@@ -117,6 +119,7 @@ gulp.task('browserify', function () {
 gulp.task('minify', function () {
     return gulp.src('./dist/core.build.js')
         .pipe(buffer())
+        .pipe(replace("catch{", "catch(ignore){"))
         .pipe(uglify())
         .pipe(rename({ suffix: '.min' }))
         .pipe(gulp.dest('./dist/'));

@@ -23,6 +23,7 @@ const userInputSeparator = "input_";
 function AssemblyScriptRunner() {
     this.supportLib = new SupportLibrary();
     this.supportLib.loadHTTP();
+    this.supportLib.loadLogger();
     this.supportLib.loadTestSync();
     this.compiler = new Compiler(this.supportLib);
 }
@@ -109,7 +110,7 @@ AssemblyScriptRunner.prototype.exec = async function (module, data, input) {
     //console.log(module);
     let preparedParams = [];
     if(module.inputNames.length > 0)
-        preparedParams = preparedParams.concat(this.findParamAssignment(module.inputNames, input, module.context))
+        preparedParams = preparedParams.concat(this.findParamAssignment(module.inputNames, input, module.context));
     if(module.dataInNames.length > 0)
         preparedParams = preparedParams.concat(this.findParamAssignment(module.dataInNames, data, module.context));
 
