@@ -27,6 +27,18 @@ function AssemblyScriptRunner() {
     this.compiler = new Compiler(this.supportLib);
 }
 
+AssemblyScriptRunner.prototype.getHTMLDescription = function () {
+    let description = "Find the official AssemblyScript documentation on <a href='https://www.assemblyscript.org/introduction.html' target='_blank'>assemblyscript.org</a>.\n"+
+        "The exported <b>run</b> function will be called with the parameters as data inputs and returned data as an output called <b>out</b>. User inputs have to be prefixed with <b>input_</b> and be the first parameters.\n"+
+        "Additional outputs are generated for exported global variables. This allows returning values resulting from asynchronous callbacks.\n"+
+        "If the <b>run</b> function has the return type \"void\" no default output is generated.\n";
+    description += "\n" + this.compiler.supportLibraryDocumentation;
+
+    //HTML new lines
+    description.replaceAll("\n", "<br>");
+    return description;
+};
+
 //inherit properties
 AssemblyScriptRunner.prototype = Object.create(Runner.prototype);
 AssemblyScriptRunner.prototype.constructor = AssemblyScriptRunner;

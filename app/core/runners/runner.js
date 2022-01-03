@@ -44,8 +44,7 @@ Runner.prototype.exec = function (module, data, input) {
  *
  * @abstract
  */
-Runner.prototype.prepare = function (module) {
-}
+Runner.prototype.prepare = function (module) {}
 
 /**
  * End user friendly Name
@@ -55,7 +54,13 @@ Runner.prototype.name = "Abstract Runner"
 /**
  * ID used internally, to identify runners
  */
-Runner.prototype.name = "abstract_runner"
+Runner.prototype.id = "abstract_runner"
+
+/**
+ * @return Description of the runner including a link to the official documentation and support library explanation as html.
+ * @abstract
+ */
+Runner.prototype.getHTMLDescription = function () {}
 
 
 /**

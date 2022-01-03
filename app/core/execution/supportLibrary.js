@@ -21,6 +21,17 @@ SupportLibrary.prototype.loadTestSync = function() {
         func: function (url) {
             return url+url;
         }};
+    this.functions.log = {
+        description: "Log the text to the browser console",
+        async: false,
+        languageSpecific: {
+            typescript: {
+                parameterSig: "text: string",
+                returnSig: "void"
+            }},
+        func: function (text) {
+            console.log(text);
+        }};
 }
 SupportLibrary.prototype.loadHTTP = function() {
     this.functions.httpRequest = {

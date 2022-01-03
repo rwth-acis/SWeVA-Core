@@ -12,6 +12,11 @@ var CompileError = require('../../core/errors/CompileError.js');
 const DefinitionError = require("../../core/errors/ExecutionError.js");
 //var AssemblyScriptGetterTransform = require('./assemblyScriptGetterTransform.js');
 
+/** include Web_Worker library for Nodejs **/
+var Worker = Worker || require('../../../node_modules/web-worker/cjs/node');
+
+console.log(Worker);
+
 /**
  * The AssemblyScriptCompiler supports strict TypeScript
  * 
@@ -63,6 +68,7 @@ AssemblyScriptCompiler.prototype.generateSupportLibraryDeclares = function (supp
     this.supportLibraryDocumentation = docs;
     console.log("Support functions:");
     console.log(this.supportLibraryDocumentation);
+    console.log(declares)
     return declares;
 }
 
@@ -73,7 +79,7 @@ AssemblyScriptCompiler.prototype.setup = async function () {
         return new Promise((resolve) => {
             console.log("Loading AssemblyScript compiler");
 
-            this.worker = new Worker('/node_modules/sweva-core/app/core/compilers/assemblyScriptCompilerWorker.js');
+            this.initWorker();
 
             this.worker.onmessage = function (e) {
                 //console.log(e.data);
@@ -95,15 +101,37 @@ AssemblyScriptCompiler.prototype.setup = async function () {
     }
 }
 
+AssemblyScriptCompiler.prototype.initWorker = function() {
+    if(typeof this.worker != 'undefined') {
+        this.worker.terminate();
+    }
+
+    //different path for NodeJS
+    if(sweva.inBrowser) {
+        this.worker = new Worker('/node_modules/sweva-core/app/core/compilers/assemblyScriptCompilerWorker.js');
+    } else {
+        this.worker = new Worker('app/core/compilers/assemblyScriptCompilerWorker.js');
+    }
+}
+
 AssemblyScriptCompiler.prototype.compile = async function (module) {
     const self = this;
 
     //load compiler
     await this.setup()
 
+    let doneCompiling = false;
+    new Promise(resolve => setTimeout(resolve, 10000)).then(() => {
+        if(!doneCompiling) {
+            this.initWorker();
+            throw new CompileError("Compilation Timeout", module.context);
+        }
+    });
+
     let workerResult = await new Promise((resolve) => {
         this.resolveCompile = resolve;
         this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
+        doneCompiling = true;
     });
 
     this.resolveCompile = null;

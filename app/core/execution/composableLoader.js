@@ -84,7 +84,7 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
             }
 
             //TODO: consider removing mapping functions
-            if (key !== 'source' && typeof json[key][0] === 'string') {
+            if (key !== 'source' && (json[key] !== null && typeof json[key][0] === 'string')) {
                 var str = String(json[key][0]);
                 //check if string array starts with 'function' -> assemble function into object
                 if (str.trim().indexOf('function') === 0) {

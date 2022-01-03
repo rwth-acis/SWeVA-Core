@@ -1,49 +1,58 @@
 ﻿//global object initialization
-var globalObject = window;
+var globalObject;
 
-/*
+var inBrowser = false;
+
 try {
     if (window) {
         globalObject = window;
+        inBrowser = true;
     }
 }
 catch (e) {
     globalObject = global;
-}*/
+}
 
-globalObject.sweva = {};
+//prevent loading everything twice on editor-page
+if(!globalObject.sweva) {
+    globalObject.sweva = {};
 
-globalObject.sweva.asyncmqtt = require('../../node_modules/async-mqtt');
+    globalObject.sweva.inBrowser = inBrowser;
 
-var Ajv = require('../../node_modules/ajv/lib/ajv.js');
-globalObject.sweva.Ajv = new Ajv();
+    globalObject.sweva.asyncmqtt = require('../../node_modules/async-mqtt');
 
-var ComposableLoader = require('../../app/core/execution/composableLoader.js');
-globalObject.sweva.ComposableLoader = new ComposableLoader('');
+    var Ajv = require('../../node_modules/ajv/lib/ajv.js');
+    globalObject.sweva.Ajv = new Ajv();
 
-globalObject.sweva.ExecutionManager = require('../../app/core/execution/executionManager.js');
+    var ComposableLoader = require('../../app/core/execution/composableLoader.js');
+    globalObject.sweva.ComposableLoader = new ComposableLoader('');
 
-var ErrorManager = require('../../app/core/errors/errorManager.js');
-globalObject.sweva.ErrorManager = new ErrorManager();
+    globalObject.sweva.ExecutionManager = require('../../app/core/execution/executionManager.js');
 
-var SwevaScript = require('../../app/core/swevaScript/swevaScript.js');
-globalObject.sweva.SwevaScript = new SwevaScript();
+    var ErrorManager = require('../../app/core/errors/errorManager.js');
+    globalObject.sweva.ErrorManager = new ErrorManager();
 
-var AssemblyScriptRunner = require('../../app/core/runners/assemblyScriptRunner.js');
+    var SwevaScript = require('../../app/core/swevaScript/swevaScript.js');
+    globalObject.sweva.SwevaScript = new SwevaScript();
 
-/*
-globalObject.sweva.axios = require('../../node_modules/axios/dist/axios.min.js');
-globalObject.sweva.libs = {
-    axios: globalObject.sweva.axios,
-    mqtt: globalObject.sweva.asyncmqtt,
-    get: globalObject.sweva.SwevaScript.get,
-    set: globalObject.sweva.SwevaScript.set,
-    //mqttclient: globalObject.sweva.SwevaScript.client,
-    //mqttsubscribe: globalObject.sweva.SwevaScript.subscribe,
-    adddata: globalObject.sweva.SwevaScript.adddata
-}*/
+    var AssemblyScriptRunner = require('../../app/core/runners/assemblyScriptRunner.js');
 
-globalObject.sweva.runners = {};
+    /*
+    globalObject.sweva.axios = require('../../node_modules/axios/dist/axios.min.js');
+    globalObject.sweva.libs = {
+        axios: globalObject.sweva.axios,
+        mqtt: globalObject.sweva.asyncmqtt,
+        get: globalObject.sweva.SwevaScript.get,
+        set: globalObject.sweva.SwevaScript.set,
+        //mqttclient: globalObject.sweva.SwevaScript.client,
+        //mqttsubscribe: globalObject.sweva.SwevaScript.subscribe,
+        adddata: globalObject.sweva.SwevaScript.adddata
+    }*/
 
-var typescript = new AssemblyScriptRunner();
-globalObject.sweva.runners[typescript.id] = typescript;
+    globalObject.sweva.runners = {};
+
+    var typescript = new AssemblyScriptRunner();
+    globalObject.sweva.runners[typescript.id] = typescript;
+}
+
+module.exports = globalObject.sweva;

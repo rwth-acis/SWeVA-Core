@@ -100,6 +100,7 @@ gulp.task('browserify', function () {
                 debug: true
             }
         )
+        .ignore('web-worker') //this is a nodejs module and only loaded for nodejs
         .bundle()
         .on('error', function(err){
             gulp_util.log(gulp_util.colors.red('Error'), err.message);

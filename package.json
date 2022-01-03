@@ -34,7 +34,6 @@
     "merge-stream": "^0.1.7",
     "minami": "1.1.1",
     "plugin-error": "^1.0.1",
-    "requirejs": "^2.3.6",
     "through2": "2.0.0",
     "version": "^0.1.2",
     "vinyl-buffer": "^1.0.1",
@@ -45,7 +44,8 @@
     "jsdoc": "./node_modules/.bin/jsdoc app/core/ -r -R README.md -d docs/jsdoc -t ./node_modules/loke-jsdoc-theme -c jsdocConfig.json",
     "docker": "./node_modules/.bin/docker -i app/core/ -o docs/docker -n -u",
     "fixdependencies": "npx npm-force-resolutions && npm install",
-    "doc": "npm run jsdoc && npm run docker"
+    "doc": "npm run jsdoc && npm run docker",
+    "startserver": "node server.js"
   },
   "engines": {
     "node": ">=0.10.0"
@@ -60,6 +60,8 @@
   "dependencies": {
     "@assemblyscript/loader": "^0.19.17",
     "as-bind": "^0.8.2",
-    "assemblyscript": "^0.19.18"
+    "assemblyscript": "^0.19.18",
+    "web-worker": "^1.2.0",
+    "requirejs": "^2.3.6"
   }
 }

@@ -1,18 +1,40 @@
-importScripts("/node_modules/requirejs/require.js");
+/** load requirejs only for webbrowsers */
+if(typeof require != "function")
+{
+    importScripts("/node_modules/requirejs/require.js");
+    require([ "/node_modules/assemblyscript/dist/sdk.js",  ], ({ asc, assemblyscript }) => {
+        define("visitor-as/as", [], assemblyscript);
+        require(["/node_modules/as-bind/dist/transform.amd.js"], asbind => {
 
-require([ "/node_modules/assemblyscript/dist/sdk.js",  ], ({ asc, assemblyscript }) => {
-    define("visitor-as/as", [], assemblyscript);
-    require(["/node_modules/as-bind/dist/transform.amd.js"], asbind => {
+            asc.ready.then(() => {
+                self.asc = asc;
+                self.asbind = asbind;
+                self.assemblyscript = assemblyscript;
 
-        asc.ready.then(() => {
-            self.asc = asc;
-            self.asbind = asbind;
-            self.assemblyscript = assemblyscript;
-
-            postMessage({type: 'setupComplete'});
+                postMessage({type: 'setupComplete'});
+            });
         });
     });
-});
+}
+else {
+    var sdk = require("../../../node_modules/assemblyscript/dist/sdk.js");
+
+    var assemblyscript = sdk.assemblyscript;
+    var asc = sdk.asc;
+
+    var asbind = require("../../../node_modules/as-bind/dist/transform.cjs.js")
+
+    asc.ready.then(() => {
+        self.asc = asc;
+        self.asbind = asbind;
+        self.assemblyscript = assemblyscript;
+
+        postMessage({type: 'setupComplete'});
+    });
+}
+
+
+
 
 onmessage = function(e) {
     switch(e.data.type) {
@@ -60,6 +82,7 @@ onmessage = function(e) {
                         "STDOUT: "+stdout.toString()+"\n" +
                         "STDERR: "+stderr.toString();
                     //console.log(errorMessage);
+                    console.log(errorMessage);
                     postMessage({type: "compileError", message: errorMessage});
                 }
             });
