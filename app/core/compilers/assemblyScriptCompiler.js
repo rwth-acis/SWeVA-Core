@@ -14,7 +14,11 @@ const DefinitionError = require("../../core/errors/ExecutionError.js");
 
 /** include web-worker library for Nodejs **/
 
-console.log(Worker);
+if(typeof Worker === 'undefined') {
+    console.log("Loading Node worker module");
+var WorkerNodeJS = require('../../../node_modules/web-worker/cjs/node');
+}
+
 
 /**
  * The AssemblyScriptCompiler supports strict TypeScript
@@ -107,9 +111,10 @@ AssemblyScriptCompiler.prototype.initWorker = function() {
 
     //different path for NodeJS
     if(sweva.inBrowser) {
+        console.log("Load worker for webbrowser");
         this.worker = new Worker('/node_modules/sweva-core/app/core/compilers/assemblyScriptCompilerWorker.js');
     } else {
-        this.worker = new Worker('app/core/compilers/assemblyScriptCompilerWorker.js');
+        this.worker = new WorkerNodeJS('app/core/compilers/assemblyScriptCompilerWorker.js');
     }
 }
 
