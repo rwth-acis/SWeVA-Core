@@ -1,4 +1,4 @@
 .tmp
 app/examplesJSON/*
-
+/node_modules
 .idea/
