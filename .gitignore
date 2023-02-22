@@ -1,7 +1,4 @@
-node_modules
-bower_components
 .tmp
 app/examplesJSON/*
 
-docs
 .idea/
