@@ -10,6 +10,8 @@ var Composable = require('../../core/composables/composable.js');
 var ExecutionError = require('../../core/errors/ExecutionError.js');
 var CompileError = require('../../core/errors/compileError.js');
 const DefinitionError = require("../../core/errors/ExecutionError.js");
+const offloadingDecision = require("../offloading/offloadingDecision");
+
 //var AssemblyScriptGetterTransform = require('./assemblyScriptGetterTransform.js');
 
 /** include web-worker library for Nodejs **/
@@ -85,7 +87,8 @@ AssemblyScriptCompiler.prototype.setup = async function () {
             this.initWorker();
 
             this.worker.onmessage = function (e) {
-                //console.log(e.data);
+                console.log('msg to worker');
+                console.log(e.data);
                 switch (e.data.type) {
                     case "setupComplete":
                         console.log("setup complete")
@@ -114,47 +117,90 @@ AssemblyScriptCompiler.prototype.initWorker = function() {
         console.log("Load worker for webbrowser");
         this.worker = new Worker('/node_modules/sweva-core/app/core/compilers/assemblyScriptCompilerWorker.js');
     } else {
+        console.log("Load worker for NodeJS");
         this.worker = new WorkerNodeJS('app/core/compilers/assemblyScriptCompilerWorker.js');
     }
 }
-
-
-
+// MA
 AssemblyScriptCompiler.prototype.compile = async function (module) {
+
     const self = this;
-    while(this.currentlyCompiling) {
-        await new Promise(resolveWait => setTimeout(resolveWait, 1));
+    while (this.currentlyCompiling) {
+        new Promise(resolveWait => setTimeout(resolveWait, 1));
     }
     this.currentlyCompiling = true;
 
     //load compiler
-    await this.setup()
+    await this.setup();
 
     let doneCompiling = false;
-    new Promise(resolve => setTimeout(resolve, 10000)).then(() => {
-        if(!doneCompiling) {
-            this.currentlyCompiling = false;
-            this.initWorker();
-            throw new CompileError("Compilation Timeout", module.context);
+    let offloading = false;
+    let intervalID;
+    let odList =[1,1,110]; //todo: user input
+    return await Promise.race([
+
+        //monitoring the compilation process
+    //TODO: change timeout to monitoring
+    new Promise(async (resolve) => {
+        //initial check
+        offloading = await offloadingDecision(odList);
+        console.log(offloading);
+        if (offloading) {
+            // optimization: speed is key we do this after resolving promise
+            //clearInterval(intervalID);
+            //abort running compilation
+            resolve('offloading');}
+        else {
+
+            // interval check
+            intervalID = setInterval(async () => {
+                offloading = await offloadingDecision(odList);
+                console.log(offloading);
+                if (offloading) {
+                    //clearInterval(intervalID);
+                    //abort running compilation
+                    resolve('offloading');
+                }
+            }, 1000);
         }
-    });
+        }
+    ),
 
-    let workerResult = await new Promise((resolve) => {
-        this.resolveCompile = resolve;
-        doneCompiling = true;
-        this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
-    });
+        // compiling the module
+        new Promise((resolve) => {
+            this.resolveCompile = resolve;
+            doneCompiling = true;
+            this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
 
-    this.currentlyCompiling = false;
+        })
 
+    ]).
+        then((wr) => {
 
-    this.resolveCompile = null;
+        let workerResult = wr;
 
-    if(workerResult.type === "compileResult")
-        return workerResult;
-    else
-        throw new CompileError(workerResult.message, module.context);
-}
+            clearInterval(intervalID); //clear monitoring interval if no offloading necessary
+            console.log('workerResult');
+            console.log(workerResult);
+            this.currentlyCompiling = false;
+
+            this.resolveCompile = null;
+
+            if (workerResult.type === "compileResult") {
+                console.log('Offloading not needed. Proceed as normal');
+                return workerResult;
+            } else if (workerResult === 'offloading') {
+                //todo: offloading callback
+                this.initWorker();
+                console.log("Offloading necessary. Callback triggered");
+                return 'offloading'; //todo: is String a good DT for return ?
+            } else
+                throw new CompileError(workerResult.message, module.context);  // Compiler Error handling
+
+        });
+
+    }
+
 
 AssemblyScriptCompiler.prototype.prepareSourceCode = function(source) {
     let getters = this.generateGlobalGetters(source);

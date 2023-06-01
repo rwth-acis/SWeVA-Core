@@ -47,7 +47,7 @@ onmessage = function(e) {
             self.asc.main([
                 "module.ts",
                 "-O3",
-                //"--debug",
+                "--debug",
                 "--runtime", "stub", //minimal runtime: garbage collection is not required, as instance is restarted after every execution
                 "--exportRuntime",
                 "--tsdFile", "module.tsd", //TypeScript Definitions for parameter name detection

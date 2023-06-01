@@ -14,16 +14,18 @@
     <button onclick="runTests()">Start tests</button>
 
     <script>
+        let startCpu, startTimestamp, startMemory;
+        let endCpu, endTimestamp, endMemory, memoryUsage , elapsedMs, cpuPercent;
 
         var manager = new sweva.ExecutionManager();
 
         async function runTests() {
-            await testPrecompiledModule()
-            await testSourceModule()
-            await testHttpRequest()
-            await testPipeLine1()
+            //await testPrecompiledModule()
+            //await testSourceModule()
+            //await testHttpRequest()
+            //await testPipeLine1()
             await testPipeline2()
-            await testPipeline3()
+            //await testPipeline3()
         }
 
         async function testPrecompiledModule() {
@@ -105,6 +107,7 @@
             console.log("\n\n--- Starting test of pipeline 1 (linked nodes)---");
             var now = Date.now();
             manager.setup(simpleAssemblyScriptPipeline);
+            console.log("Setup complete. Setup time: " + (Date.now() - now));
             manager.onProgress(function (progress) {
                 console.log(progress+"%");
             });
@@ -117,19 +120,40 @@
             console.log('time ' + (Date.now() - now) + 'ms');
             console.log(res);
         }
+        function outputUsage() {
+            endCpu = performance.now();
+            endTimestamp = performance.now();
+            endMemory = window.performance.memory.usedJSHeapSize;
+            //memoryUsage = endMemory - startMemory;
+            //elapsedMs = endTimestamp - startTimestamp;
+            cpuPercent = (endCpu - startCpu) / (endTimestamp - startTimestamp);
 
+            console.log('RAM usage: ', endMemory - startMemory,'CPU time: ',endCpu - startCpu ,'CPU usage:', cpuPercent);
+        }
+        function initializeMeasurements() {
+            startCpu = performance.now();
+            startTimestamp = performance.now();
+            startMemory = window.performance.memory.usedJSHeapSize;
+
+        }
         async function testPipeline2() {
             console.log("\n\n--- Starting test of pipeline 2 (exported results)---");
+            //Pipeline Setup profiling
+
             var now = Date.now();
+
+            //initializeMeasurements()
             manager.setup(simpleAssemblyScriptPipeline2);
+            outputUsage();
+            //initializeMeasurements()
             manager.onProgress(function (progress) {
                 console.log("Progress: "+progress+"%");
             });
-
             let res = await manager.execute({
                 "Node1": {
                     "num": 8
                 }}, {});
+            //outputUsage();
             console.log('time ' + (Date.now() - now) + 'ms');
             console.log(res);
         }

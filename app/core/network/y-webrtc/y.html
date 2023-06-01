@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+    <script src="https://cdn.jsdelivr.net/npm/y-webrtc/bin/y-webrtc.min.js"></script>
+
+    <script>
+        // Initialize Y-WebRTC and create a new connection
+        const ydoc = new Y.Doc();
+        const rtc = new Y.WebRTC('room-name', ydoc);
+
+        // Create data channels for sending and receiving messages
+        const dc1 = rtc.getDC('peer-id-1');
+        const dc2 = rtc.getDC('peer-id-2');
+
+        // Listen for messages on the first data channel
+        dc1.on('message', (message) => {
+            console.log(`Peer 1 received message: ${message}`);
+
+            // Send a response to the second peer
+            dc2.send('Hello back!');
+        });
+
+        // Listen for messages on the second data channel
+        dc2.on('message', (message) => {
+            console.log(`Peer 2 received message: ${message}`);
+
+            // Send a response to the first peer
+            dc1.send('Hi there!');
+        });
+
+        // Send an initial message from the first peer to start the dialog
+        dc1.send('Hello, Peer 2!');
+
+    </script>
+</head>
+<body>
+
+</body>
+</html>

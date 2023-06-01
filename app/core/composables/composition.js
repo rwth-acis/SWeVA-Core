@@ -218,7 +218,7 @@ Composition.prototype.hasParameters = function (composableName) {
     
     
     //if it does not need any, we are good here
-    if (parametersNeeded.length == 0) {
+    if (parametersNeeded.length === 0) {
         return true;
     }
     
@@ -346,7 +346,7 @@ Composition.prototype.hasCycles = function (startingNodeArray) {
                 for (var key in edges) {
                     if (edges.hasOwnProperty(key)) {
                         for (var k = 0; k < edges[key].length; k++) {
-                            if (edges[key][k] == m) {
+                            if (edges[key][k] === m) {
                                 hasIncoming = true;
                                 break;
                             }
@@ -359,7 +359,7 @@ Composition.prototype.hasCycles = function (startingNodeArray) {
                 if (!hasIncoming) {
                     S.push(m);
                 }
-                if (edges[n].length == 0) {
+                if (edges[n].length === 0) {
                     delete edges[n];
                     break;
                 }
@@ -425,7 +425,7 @@ Composition.prototype.checkSchemaCompatibility = function (obj1Name, obj2Name, o
                 to[key].sort();
 
                 //first check if the length is the same
-                if (from[key].length != to[key].length) {
+                if (from[key].length !== to[key].length) {
                     error = {
                         level: level,
                         message: 'array length different for "' + key + '" ' + from[key].toString() + ' != ' + to[key].toString()
@@ -703,6 +703,15 @@ Composition.prototype.composableQueueExecution = function (context) {
     
     //keep an array of all composables
     //executed composables get marked
+    /*
+    console.log("CQE : context =");
+    console.log(context);
+    console.log("CQE : this =");
+    console.log(this);
+    console.log("CQE : unclearedComposables =");
+    console.log(this.unlcearedComposables);
+    */
+
     for (var i = 0; i < this.unlcearedComposables.length; i++) {
 
         //skip already executed composables

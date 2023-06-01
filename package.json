@@ -61,7 +61,10 @@
     "@assemblyscript/loader": "^0.19.17",
     "as-bind": "^0.8.2",
     "assemblyscript": "^0.19.18",
-    "web-worker": "^1.2.0",
-    "requirejs": "^2.3.6"
+    "peer": "^1.0.0",
+    "peerjs": "^1.4.7",
+    "requirejs": "^2.3.6",
+    "systeminformation": "^5.17.12",
+    "web-worker": "^1.2.0"
   }
 }

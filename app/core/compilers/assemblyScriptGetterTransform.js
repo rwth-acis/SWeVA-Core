@@ -29,8 +29,8 @@ class AssemblyScriptGetterGenerator extends Transform {
     }
     afterCompile(module) {
         var {CommonFlags, Signature, DecoratorFlags, Type, Visitor, VisitorContext,TypeRef} = window.require("assemblyscript");
-        console.log(module);
-        console.log(this.program);
+        //console.log(module);
+        //console.log(this.program);
         let globalType = TypeRef.I32; //getGlobalType(module.getGlobal("testvar1"));
         let expr = module.global.get(module.getGlobalByIndex(1));
         module.addFunction('aaa', TypeRef.I32, globalType, null, expr);

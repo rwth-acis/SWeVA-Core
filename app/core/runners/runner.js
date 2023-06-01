@@ -25,7 +25,6 @@ function Runner() {
  * @param {module} module - module containing source code/binary to run
  * @param {Object} data - data passed to the processing node
  * @param {Object} input - inputs passed to the processing node
- *
  * @abstract
  */
 Runner.prototype.exec = function (module, data, input) {

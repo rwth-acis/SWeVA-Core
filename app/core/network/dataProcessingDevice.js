@@ -1,0 +1,91 @@
+const offloadingTarget = require("../offloading/offloadingTarget.js");
+
+function createPeer(id, callback = () => {
+}) {
+    let peer = new Peer(id, {
+        host: "localhost",
+        port: 9000,
+        path: "/myapp",
+    });
+    peer.on('open', function (ID) {
+        console.log('My peer ID is: ' + ID);
+        callback();
+    });
+    peer.on("error", function (err) {
+        console.log("Error: " + err);
+    });
+    peer.on('disconnected', function (ID) {
+        console.log('peer ID ' + ID+' disconnected');
+        callback();
+    });
+
+    return peer;
+}
+
+function dataProcessingDevice(pipeline) {
+    let idAndDMIpairs = {};
+    let connections = {};
+    let allReceived = false;
+    let peer = createPeer('source', () => {
+
+        peer.on('connection', (connection) => {
+            //to check which peer sent a msg and which didn't YET!
+            connections[connection.peer]=false;
+            console.log('connected to peer : '+connection.peer);
+            console.log(connections);
+            connection.on('data', (data) => {
+
+                //TODO: DMI format probe
+                if (Array.isArray(data) &&
+                    data.length > 0 &&
+                    data[data.length-1]==='dmi')
+                {
+                    console.log('received DMI from: ',connection.peer);
+                    console.log(data);
+                    //delete the flag
+                    connections[connection.peer]=true;
+                    console.log(connections);
+                    idAndDMIpairs[connection.peer]= data;
+
+                    allReceived= Object.values(connections).every(value => value === true);
+                    console.log(allReceived);
+
+                    //todo: have a timeout for robustness
+                    if (allReceived){
+
+                        return processMsgs();
+                    }
+
+
+                }else{
+                    console.log("Error encountered while receiving the dmi");
+                    //TODO: error handling
+                }
+
+
+            });
+        });
+        function processMsgs () {
+            console.log('entered processMsgs functions');
+            let potId = offloadingTarget(idAndDMIpairs); //TODO: change processList to chooseBestPOT
+            console.log('chosen potID for offloading: ' + potId);
+
+            const conn = peer.connect(potId);
+            conn.on('open', () => {
+                console.log('connection opened');
+                conn.send(pipeline); //send pipeline here
+            });
+            conn.on('data', (data) => {
+                console.log('Pipeline result: '+data); //receive pipeline results here
+                //peer.destroy();
+                return data;
+                //c.send('good day!');
+                //TODO: disconnect/destroy peer after receiving pipeline results
+            });
+
+
+        }
+    });
+
+}
+module.exports =dataProcessingDevice
