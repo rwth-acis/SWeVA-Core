@@ -11,8 +11,8 @@
     <br><br>
     have fun :)
     <script src ="./availableOffloadingResources.js"></script>
-
     <script src ="./offloadingDecision.js"></script>
+
     <script>
         function testAvailableOffloadingResources(orList) {
             let startTime = Date.now();
@@ -35,12 +35,11 @@
                     console.log(result);
                     console.log('Elapsed time: ',endTime-startTime, ' ms');
                 });
-
-
             },2000);
+
             // 5 measurements
             setTimeout  (()=>{
-                console.log('Timeout');
+                console.log('Timeout !');
                 clearInterval(interval);
             },10000)
         }
