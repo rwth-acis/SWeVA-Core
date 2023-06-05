@@ -19,13 +19,13 @@ const offloadingDecision = require("../offloading/offloadingDecision");
 
 if(typeof Worker === 'undefined') {
     console.log("Loading Node worker module");
-var WorkerNodeJS = require('../../../node_modules/web-worker/cjs/node');
+    var WorkerNodeJS = require('../../../node_modules/web-worker/cjs/node');
 }
 
 
 /**
  * The AssemblyScriptCompiler supports strict TypeScript
- * 
+ *
  * @constructor
  * @extends Compiler
  *
@@ -137,70 +137,80 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
     let doneCompiling = false;
     let offloading = false;
     let intervalID;
-    let odList =[1,1,110]; //todo: user input
+    let odList =[1,1,70]; //todo: user input
+    let startCPU =performance.now();
+    let endCPU = 0;
+    let cpuMonitor=0;
+    // initial mem / battery check
+    offloading = await offloadingDecision(odList);
+    console.log('initial offloading decision = ',offloading);
+    if (offloading) {
+        // optimization: speed is key we do this after resolving promise
+        //clearInterval(intervalID);
+        //abort running compilation
+        return ('offloading');
+    }
     return await Promise.race([
-
         //monitoring the compilation process
-    //TODO: change timeout to monitoring
-    new Promise(async (resolve) => {
-        //initial check
-        offloading = await offloadingDecision(odList);
-        console.log(offloading);
-        if (offloading) {
-            // optimization: speed is key we do this after resolving promise
-            //clearInterval(intervalID);
-            //abort running compilation
-            resolve('offloading');}
-        else {
-
+        new Promise( async (resolve) => {
+            console.log('Begin periodic monitoring execution...');
             // interval check
             intervalID = setInterval(async () => {
+                endCPU = performance.now();
+                cpuMonitor = ((endCPU - startCPU)/5000)*100;
+                console.log('CPU TIME= ', cpuMonitor);
+                if (cpuMonitor > odList[0]) {
+                    console.log("Monitoring = CPU limit exceeded");
+                    resolve('offloading');
+                }
                 offloading = await offloadingDecision(odList);
-                console.log(offloading);
+                console.log('periodic offloading decision = ', offloading);
                 if (offloading) {
+                    // optimization: speed is key we do this after resolving promise
                     //clearInterval(intervalID);
                     //abort running compilation
                     resolve('offloading');
                 }
-            }, 1000);
-        }
-        }
-    ),
+            }, 1);
+        }),
 
         // compiling the module
         new Promise((resolve) => {
+
             this.resolveCompile = resolve;
             doneCompiling = true;
             this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
 
         })
 
+
+
     ]).
-        then((wr) => {
+    then((wr) => {
 
         let workerResult = wr;
 
-            clearInterval(intervalID); //clear monitoring interval if no offloading necessary
-            console.log('workerResult');
-            console.log(workerResult);
-            this.currentlyCompiling = false;
+        clearInterval(intervalID); //clear monitoring interval if no offloading necessary
+        console.log('workerResult');
+        console.log(workerResult);
+        this.currentlyCompiling = false;
 
-            this.resolveCompile = null;
+        this.resolveCompile = null;
 
-            if (workerResult.type === "compileResult") {
-                console.log('Offloading not needed. Proceed as normal');
-                return workerResult;
-            } else if (workerResult === 'offloading') {
-                //todo: offloading callback
-                this.initWorker();
-                console.log("Offloading necessary. Callback triggered");
-                return 'offloading'; //todo: is String a good DT for return ?
-            } else
-                throw new CompileError(workerResult.message, module.context);  // Compiler Error handling
+        if (workerResult.type === "compileResult") {
+            console.log('Offloading not needed. Proceed as normal');
+            return workerResult;
+        } else if (workerResult === 'offloading') {
+            //todo: offloading callback
+            this.initWorker();
+            console.log("Offloading necessary. Callback triggered");
+            return 'offloading'; //todo: is String a good DT for return ?
+        } else
+            throw new CompileError(workerResult.message, module.context);  // Compiler Error handling
 
-        });
+    });
 
-    }
+}
 
 
 AssemblyScriptCompiler.prototype.prepareSourceCode = function(source) {
@@ -3198,9 +3208,9 @@ module.exports = potentialOffloadingTarget
 
 
 //Question: should i declare si outside or in the function?
-
+/*
 // output format DMI = [cpu %,mem %,battery %]
-const si = require('systeminformation');
+
 async function deviceMonitoringIndex() {
         let listOfMetrics = [];
 
@@ -3250,94 +3260,93 @@ async function offloadingDecision2(odList) {
 
 
 }
-
+*/
 
 // Optimized DMI function:
+// TODO : require not working in WEB environment !
+
+
+
+
+
 async function offloadingDecision(odList) {
     if (odList[0] === 0 || odList[1] === 0 || odList[2] === 0) {
         return true;
     }
+    let cpuLoad = 0;
+    let memUsage = 0;
+    let batteryPercent = 0;
+    let offloading = false;
+    if (typeof window !== 'undefined') {
+        //Browser environment
 
-    // OPTIMIZATION : Check if results are already cached
-    /*const cacheKey = JSON.stringify(odList);
-    if (cache[cacheKey]) {
-        return cache[cacheKey];
-    }*/
+        memUsage = (performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit) * 100;
+        let battery = await navigator.getBattery();
+        batteryPercent = battery.level * 100;
+    } else {
+        //NodeJS environment
+        let si = require('systeminformation');
 
-    // Execute all async calls in parallel
-    const [cpu, mem, battery] = await Promise.all([
-        si.currentLoad(),
-        si.mem(),
-        si.battery()
-    ]).catch((err) => {
-        console.log('Error occurred while monitoring device with package systeminformation: ' + err);
-    });
-    let memUsage;
-    try{
-        //nodeJS environment
-        const memRSS = process.memoryUsage();
-        memUsage = ((memRSS.rss / mem.available) * 100);
-    }catch (e){
-        //browser environment
-        memUsage = (performance.memory.used / performance.memory.total) * 100;
+        await ([
+            si.currentLoad(),
+            si.mem(),
+            si.battery()
+        ]).then(([cpu, mem, battery]) => {
+            let memRSS = process.memoryUsage();
+            memUsage = (memRSS.rss / mem.available) * 100;
+            cpuLoad = cpu.avgLoad;
+            batteryPercent = battery.percent;
+            console.log('cpu = ',cpuLoad, 'mem = ',memUsage,'battery = ',batteryPercent);
+        }).catch((err) => {
+            console.log('Error occurred while monitoring device: ' + err);
+        });
     }
-    // Calculate metrics
-    const cpuLoad = cpu.avgLoad;
-    const batteryPercent = battery.percent;
-
-    // Store results in cache
-    const offloading = cpuLoad < odList[0] || memUsage < odList[1] || batteryPercent < odList[2];
-    //cache[cacheKey] = offloading;
+            if (cpuLoad > odList[0]) {
+                console.log('Monitoring = CPU limit exceeded');
+                offloading = true;
+            } else if (memUsage > odList[1]) {
+                console.log('Monitoring = Memory limit exceeded');
+                offloading = true;
+            } else if (batteryPercent < odList[2]) {
+                console.log('Monitoring = Battery limit exceeded');
+                offloading = true;
+            }
 
     return offloading;
 }
+module.exports = offloadingDecision
+
+
 
 //for testing purposes
 
 // USER Input odList = [Limit_cpu %, Limit_mem %, Limit_battery %]
-/*
+
 //let time =0;
 let i=0;
-let odList =[10,10,10];
+let odList =[10,10,60];
 let startTime = null;
 let endTime =null;
 let avgList=[] ;
 
-startTime = process.hrtime();
-offloadingDecision(odList).then((result) => {
-    endTime = process.hrtime(startTime);
-    console.log('### init')
-    console.log(result);
-    console.log('Elapsed time: '+(endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2)+ ' ms');
-    avgList.push((endTime[0] * 1000 + endTime[1] / 1000000));
-});
-setInterval(()=>{
-    startTime = process.hrtime();
-    offloadingDecision(odList).then((result) => {
-        endTime = process.hrtime(startTime);
 
-        console.log('### '+i);
-        i++;
-        console.log(result);
-        console.log('Elapsed time: '+(endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2)+ ' ms');
-        avgList.push((endTime[0] * 1000 + endTime[1] / 1000000));
-    });
+setInterval(()=>{
+       startTime = process.hrtime();
+       offloadingDecision(odList).then ((result)=>{
+       endTime = process.hrtime(startTime);
+
+       console.log('Monitoring Round #'+i);
+       i++;
+       console.log(result);
+       console.log('Elapsed time: '+(endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2)+ ' ms');
+   });
+
 
 },1500);
-setInterval(()=>{
-    let temp = 0;
-    const l = avgList.length;
-    //calculate average of avgList
-    for (let j = 0; j < l; j++) {
-        temp += avgList[j];
-    }
-
-    console.log('AVG value = ',temp/l);
-},5000)
-*/
 
 
-module.exports = offloadingDecision
+
+
 }).call(this)}).call(this,require('_process'))
 
 },{"_process":179,"systeminformation":227}],17:[function(require,module,exports){

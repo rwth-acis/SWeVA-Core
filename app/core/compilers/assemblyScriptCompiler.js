@@ -18,13 +18,13 @@ const offloadingDecision = require("../offloading/offloadingDecision");
 
 if(typeof Worker === 'undefined') {
     console.log("Loading Node worker module");
-var WorkerNodeJS = require('../../../node_modules/web-worker/cjs/node');
+    var WorkerNodeJS = require('../../../node_modules/web-worker/cjs/node');
 }
 
 
 /**
  * The AssemblyScriptCompiler supports strict TypeScript
- * 
+ *
  * @constructor
  * @extends Compiler
  *
@@ -136,70 +136,80 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
     let doneCompiling = false;
     let offloading = false;
     let intervalID;
-    let odList =[1,1,110]; //todo: user input
+    let odList =[1,1,70]; //todo: user input
+    let startCPU =performance.now();
+    let endCPU = 0;
+    let cpuMonitor=0;
+    // initial mem / battery check
+    offloading = await offloadingDecision(odList);
+    console.log('initial offloading decision = ',offloading);
+    if (offloading) {
+        // optimization: speed is key we do this after resolving promise
+        //clearInterval(intervalID);
+        //abort running compilation
+        return ('offloading');
+    }
     return await Promise.race([
-
         //monitoring the compilation process
-    //TODO: change timeout to monitoring
-    new Promise(async (resolve) => {
-        //initial check
-        offloading = await offloadingDecision(odList);
-        console.log(offloading);
-        if (offloading) {
-            // optimization: speed is key we do this after resolving promise
-            //clearInterval(intervalID);
-            //abort running compilation
-            resolve('offloading');}
-        else {
-
+        new Promise( async (resolve) => {
+            console.log('Begin periodic monitoring execution...');
             // interval check
             intervalID = setInterval(async () => {
+                endCPU = performance.now();
+                cpuMonitor = ((endCPU - startCPU)/5000)*100;
+                console.log('CPU TIME= ', cpuMonitor);
+                if (cpuMonitor > odList[0]) {
+                    console.log("Monitoring = CPU limit exceeded");
+                    resolve('offloading');
+                }
                 offloading = await offloadingDecision(odList);
-                console.log(offloading);
+                console.log('periodic offloading decision = ', offloading);
                 if (offloading) {
+                    // optimization: speed is key we do this after resolving promise
                     //clearInterval(intervalID);
                     //abort running compilation
                     resolve('offloading');
                 }
-            }, 1000);
-        }
-        }
-    ),
+            }, 1);
+        }),
 
         // compiling the module
         new Promise((resolve) => {
+
             this.resolveCompile = resolve;
             doneCompiling = true;
             this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
 
         })
 
+
+
     ]).
-        then((wr) => {
+    then((wr) => {
 
         let workerResult = wr;
 
-            clearInterval(intervalID); //clear monitoring interval if no offloading necessary
-            console.log('workerResult');
-            console.log(workerResult);
-            this.currentlyCompiling = false;
+        clearInterval(intervalID); //clear monitoring interval if no offloading necessary
+        console.log('workerResult');
+        console.log(workerResult);
+        this.currentlyCompiling = false;
 
-            this.resolveCompile = null;
+        this.resolveCompile = null;
 
-            if (workerResult.type === "compileResult") {
-                console.log('Offloading not needed. Proceed as normal');
-                return workerResult;
-            } else if (workerResult === 'offloading') {
-                //todo: offloading callback
-                this.initWorker();
-                console.log("Offloading necessary. Callback triggered");
-                return 'offloading'; //todo: is String a good DT for return ?
-            } else
-                throw new CompileError(workerResult.message, module.context);  // Compiler Error handling
+        if (workerResult.type === "compileResult") {
+            console.log('Offloading not needed. Proceed as normal');
+            return workerResult;
+        } else if (workerResult === 'offloading') {
+            //todo: offloading callback
+            this.initWorker();
+            console.log("Offloading necessary. Callback triggered");
+            return 'offloading'; //todo: is String a good DT for return ?
+        } else
+            throw new CompileError(workerResult.message, module.context);  // Compiler Error handling
 
-        });
+    });
 
-    }
+}
 
 
 AssemblyScriptCompiler.prototype.prepareSourceCode = function(source) {

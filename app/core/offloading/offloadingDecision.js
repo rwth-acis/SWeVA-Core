@@ -1,143 +1,88 @@
+/*
+*
+Use this function to monitor any SWeVA execution and determine necessity of offloading
+based on CPU , Memory and Battery metrics. This function can be used in both
+Web and NodeJS environments !
+* USER Input odList = [Limit_cpu %, Limit_mem %, Limit_battery %]
+*/
 
-
-//Question: should i declare si outside or in the function?
-
-// output format DMI = [cpu %,mem %,battery %]
-const si = require('systeminformation');
-async function deviceMonitoringIndex() {
-        let listOfMetrics = [];
-
-
-        const cpu = await si.currentLoad().catch((err) => {
-            console.log('Error getting memory');
-            console.error(err);
-            reject();
-        });
-
-        const mem = await si.mem().catch((err) => {
-            console.log('Error getting memory');
-            console.error(err);
-            reject();
-        });
-
-        const memRSS = process.memoryUsage();
-
-        //Optional: const storage = await si.fsSize();
-        const battery = await si.battery().catch((err) => {
-            console.log('Error getting memory');
-            console.error(err);
-            reject();
-        });
-        listOfMetrics.push(cpu.avgLoad.toFixed(2), ((memRSS.rss/mem.available)*100).toFixed(2),battery.percent);
-        //Optional: const status = battery.ischarging
-        return listOfMetrics;
-
-    //todo: error handling
-    }
-
-//while false continue executing pipeline
-// if od = TRUE, aboard execution of promise and offload
-
-//input offloadingDecisionList = [cpu %, mem %, battery %]
-
-async function offloadingDecision2(odList) {
-    if (odList[0] === 0 || odList[1] === 0 || odList[2] === 0) {
-        return true
-    } // case 1
-    let dmiList = await deviceMonitoringIndex();
-        console.log(dmiList);
-        return (dmiList[0] < odList[0] ||
-            dmiList[1] < odList[1] ||
-            dmiList[2] < odList[2]); //case 2
-
-
-
-}
-
-
-// Optimized DMI function:
 async function offloadingDecision(odList) {
     if (odList[0] === 0 || odList[1] === 0 || odList[2] === 0) {
         return true;
     }
+    let cpuLoad = 0;
+    let memUsage = 0;
+    let batteryPercent = 0;
+    let offloading = false;
+    if (typeof window !== 'undefined') {
 
-    // OPTIMIZATION : Check if results are already cached
-    /*const cacheKey = JSON.stringify(odList);
-    if (cache[cacheKey]) {
-        return cache[cacheKey];
-    }*/
+        //Browser environment
+        memUsage = (performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit) * 100;
+        let battery = await navigator.getBattery();
+        batteryPercent = battery.level * 100;
+        console.log('cpu = ',cpuLoad, 'mem = ',memUsage,'battery = ',batteryPercent);
 
-    // Execute all async calls in parallel
-    const [cpu, mem, battery] = await Promise.all([
-        si.currentLoad(),
-        si.mem(),
-        si.battery()
-    ]).catch((err) => {
-        console.log('Error occurred while monitoring device with package systeminformation: ' + err);
-    });
-    let memUsage;
-    try{
-        //nodeJS environment
-        const memRSS = process.memoryUsage();
-        memUsage = ((memRSS.rss / mem.available) * 100);
-    }catch (e){
-        //browser environment
-        memUsage = (performance.memory.used / performance.memory.total) * 100;
+    } else {
+
+        //NodeJS environment
+        let si = require('systeminformation');
+
+        await Promise.all ([
+            si.currentLoad(),
+            si.mem(),
+            si.battery()
+        ]).then(([cpu, mem, battery]) => {
+            let memRSS = process.memoryUsage();
+            memUsage = (memRSS.rss / mem.available) * 100;
+            cpuLoad = cpu.avgLoad;
+            batteryPercent = battery.percent;
+            console.log('cpu = ',cpuLoad, 'mem = ',memUsage,'battery = ',batteryPercent);
+        }).catch((err) => {
+            console.log('Error occurred extracting metrics in the NodeJS environment. ERROR = ' + err);
+        });
     }
-    // Calculate metrics
-    const cpuLoad = cpu.avgLoad;
-    const batteryPercent = battery.percent;
-
-    // Store results in cache
-    const offloading = cpuLoad < odList[0] || memUsage < odList[1] || batteryPercent < odList[2];
-    //cache[cacheKey] = offloading;
+            if (cpuLoad > odList[0]) {
+                console.log('Monitoring = CPU limit exceeded');
+                offloading = true;
+            } else if (memUsage > odList[1]) {
+                console.log('Monitoring = Memory limit exceeded');
+                offloading = true;
+            } else if (batteryPercent < odList[2]) {
+                console.log('Monitoring = Battery limit exceeded');
+                offloading = true;
+            }
 
     return offloading;
 }
+module.exports = offloadingDecision
 
-//for testing purposes
 
-// USER Input odList = [Limit_cpu %, Limit_mem %, Limit_battery %]
+
+
 /*
+// TEST function for Node.js environment
+
 //let time =0;
 let i=0;
-let odList =[10,10,10];
+let odList =[10,10,90];
 let startTime = null;
 let endTime =null;
 let avgList=[] ;
 
-startTime = process.hrtime();
-offloadingDecision(odList).then((result) => {
-    endTime = process.hrtime(startTime);
-    console.log('### init')
-    console.log(result);
-    console.log('Elapsed time: '+(endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2)+ ' ms');
-    avgList.push((endTime[0] * 1000 + endTime[1] / 1000000));
-});
+
 setInterval(()=>{
-    startTime = process.hrtime();
-    offloadingDecision(odList).then((result) => {
-        endTime = process.hrtime(startTime);
+       startTime = process.hrtime();
+       offloadingDecision(odList).then ((result)=>{
+       endTime = process.hrtime(startTime);
 
-        console.log('### '+i);
-        i++;
-        console.log(result);
-        console.log('Elapsed time: '+(endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2)+ ' ms');
-        avgList.push((endTime[0] * 1000 + endTime[1] / 1000000));
-    });
+       console.log('Monitoring Round #'+i);
+       i++;
+       console.log(result);
+       console.log('Elapsed time: '+(endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2)+ ' ms');
+   });
 
-},1500);
-setInterval(()=>{
-    let temp = 0;
-    const l = avgList.length;
-    //calculate average of avgList
-    for (let j = 0; j < l; j++) {
-        temp += avgList[j];
-    }
 
-    console.log('AVG value = ',temp/l);
-},5000)
+},3000);
 */
 
 
-module.exports = offloadingDecision
