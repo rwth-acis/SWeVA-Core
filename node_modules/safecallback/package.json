@@ -1,0 +1,43 @@
+{
+	"name": "safecallback",
+	"version": "1.0.1",
+	"description": "Handle callback errors safely and easily",
+	"homepage": "https://github.com/bevry/safecallback",
+	"keywords": [
+		"callback",
+		"flow",
+		"async",
+		"errors",
+		"error"
+	],
+	"author": "Bevry Pty Ltd <us@bevry.me> (http://bevry.me)",
+	"maintainers": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"contributors": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"bugs": {
+		"url": "https://github.com/bevry/safecallback/issues"
+	},
+	"repository" : {
+		"type": "git",
+		"url": "https://github.com/bevry/safecallback.git"
+	},
+	"engines" : {
+		"node": ">=0.4"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"chai": "~1.5.0",
+		"joe": "~1.1.2"
+	},
+	"directories": {
+		"lib": "./lib"
+	},
+	"bin": {},
+	"scripts": {
+		"test": "node ./test/everything-test.js"
+	},
+	"main": "./lib/safecallback.js"
+}

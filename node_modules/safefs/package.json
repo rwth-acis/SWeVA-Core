@@ -1,0 +1,39 @@
+{
+	"name": "safefs",
+	"version": "2.0.3",
+	"description": "Say goodbye to EMFILE errors! Open only as many files as the operating system supports",
+	"homepage": "https://github.com/bevry/safefs",
+	"keywords": [
+		"fs", "path", "openFile", "closeFile", "emfile"
+	],
+	"author": "Bevry Pty Ltd <us@bevry.me> (http://bevry.me)",
+	"maintainers": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"contributors": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"bugs": {
+		"url": "https://github.com/bevry/safefs/issues"
+	},
+	"repository" : {
+		"type": "git",
+		"url": "http://github.com/bevry/safefs.git"
+	},
+	"engines" : {
+		"node": ">=0.4"
+	},
+	"devDependencies": {
+		"taskgroup": "~2.0.0",
+		"coffee-script": "~1.6.2",
+		"joe": "~1.1.2",
+		"chai": "~1.5.0"
+	},
+	"directories": {
+		"lib": "./out/lib"
+	},
+	"scripts": {
+		"test": "node ./out/test/safefs-test.js"
+	},
+	"main": "./out/lib/safefs.js"
+}

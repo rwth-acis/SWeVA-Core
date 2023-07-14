@@ -64,6 +64,9 @@ function SwevaError(message, context, faultyObject) {
     * @type {number}
     */
     this.time = Date.now();
+
+    console.error("Error in "+context+" created! Stacktrace:");
+    console.trace();
 }
 //inherit properties
 SwevaError.prototype = Object.create(Error.prototype, {

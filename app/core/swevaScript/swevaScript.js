@@ -95,7 +95,7 @@ SwevaScript.prototype.verify = function (code) {
         valid: true,
         error: ''
     }
-}
+};
 
 /**
  * Replaces the forbidden [] accessor, by checking the property name during runtime.
@@ -187,8 +187,7 @@ SwevaScript.prototype.set = function (object, property, value) {
     else if (typeof property === 'number') {
         object[property] = value;
     }
-}
-
+};
 
 /**
  * Sanitizes given Javascript code by verifying if it is a safer subset of JavaScript and masking global variables.

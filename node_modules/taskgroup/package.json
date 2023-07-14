@@ -1,0 +1,46 @@
+{
+	"name": "taskgroup",
+	"version": "2.0.0",
+	"description": "Group together synchronous and asynchronous tasks and execute them in either serial or parallel",
+	"homepage": "https://github.com/bevry/taskgroup",
+	"keywords": [
+		"flow",
+		"control",
+		"async",
+		"sync",
+		"tasks",
+		"batch"
+	],
+	"author": "Bevry Pty Ltd <us@bevry.me> (http://bevry.me)",
+	"maintainers": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"contributors": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"bugs": {
+		"url": "https://github.com/bevry/taskgroup/issues"
+	},
+	"repository" : {
+		"type": "git",
+		"url": "http://github.com/bevry/taskgroup.git"
+	},
+	"engines" : {
+		"node": ">=0.4"
+	},
+	"dependencies": {
+		"typechecker": "~2.0.1",
+		"ambi": "~2.0.0"
+	},
+	"devDependencies": {
+		"coffee-script": "~1.6.2",
+		"joe": "~1.1.2"
+	},
+	"directories": {
+		"lib": "./out/lib"
+	},
+	"scripts": {
+		"test": "node ./out/test/taskgroup-test.js --joe-reporter=list"
+	},
+	"main": "./out/lib/taskgroup.js"
+}

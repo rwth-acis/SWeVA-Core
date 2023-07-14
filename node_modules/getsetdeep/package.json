@@ -1,0 +1,40 @@
+{
+	"name": "getsetdeep",
+	"version": "2.0.0",
+	"description": "Get and set nested variables of an object, includes support for Backbone Models",
+	"homepage": "https://github.com/bevry/getsetdeep",
+	"keywords": [
+		"setDeep","getDeep","set","get","getter","setter","backbone","backbone.js"
+	],
+	"author": "Bevry Pty Ltd <us@bevry.me> (http://bevry.me)",
+	"maintainers": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"contributors": [
+		"Benjamin Lupton <b@lupton.cc> (https://github.com/balupton)"
+	],
+	"bugs": {
+		"url": "https://github.com/bevry/getsetdeep/issues"
+	},
+	"repository" : {
+		"type": "git",
+		"url": "http://github.com/bevry/getsetdeep.git"
+	},
+	"engines" : {
+		"node": ">=0.4"
+	},
+	"dependencies": {
+		"typechecker": "~2.0.1"
+	},
+	"devDependencies": {
+		"coffee-script": "~1.6.2",
+		"joe": "~1.1.2"
+	},
+	"directories": {
+		"lib": "./out/lib"
+	},
+	"scripts": {
+		"test": "node ./out/test/getsetdeep-test.js"
+	},
+	"main": "./out/lib/getsetdeep.js"
+}

@@ -1,9 +1,8 @@
 ﻿'use strict';
-//var axios = require('../../../bower_components/axios/dist/axios.min.js');
 
-var Module = require('../composables/module.js');
-var Composition = require('../composables/composition.js');
-var DefinitionError = require('../errors/definitionError.js');
+var Module = require('../../core/composables/module.js');
+var Composition = require('../../core/composables/composition.js');
+var DefinitionError = require('../../core/errors/definitionError.js');
 
 /**
  * Responsible for dynamically loading composables from a web address.
@@ -77,21 +76,49 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
     var self = this;
     for (var key in json) {
         if (json.hasOwnProperty(key)) {
-            //reconstruct functions from string
-            if (typeof json[key][0] === 'string') {
-                var str = new String(json[key][0]);
+           //decode base64 encoded binaries
+            if(key === 'binary' && !(json[key] instanceof Uint8Array)) {
+                /*console.log(json)
+                console.log(context)
+                console.log(json[key]);
+                console.log(typeof json[key])*/
+                let binaryList = atob(json[key]);
+               json[key] = new Uint8Array(binaryList.split("").map(function(c) {
+                   return c.charCodeAt(0);
+               }));
+            }
+
+            //TODO: consider removing mapping functions
+            if (key !== 'source' && (json[key] !== null && typeof json[key][0] === 'string')) {
+                var str = String(json[key][0]);
                 //check if string array starts with 'function' -> assemble function into object
-                if (str.trim().indexOf('function') == 0) {
+                if (str.trim().indexOf('function') === 0) {
                     //first sanitize the script to prevent malicious code execution
-                    
+
                     json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
                         function (error) {
                             sweva.ErrorManager.error(
-                              new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
-                              context, self.convertJsonToCode(json)));
+                                new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
+                                    context, self.convertJsonToCode(json)));
                         });
                 }
             }
+
+            /*//TODO: consider removing mapping functions
+            if (key !== 'source' && typeof json[key][0] === 'string') {
+                var str = String(json[key][0]);
+                //check if string array starts with 'function' -> assemble function into object
+                if (str.trim().indexOf('function') === 0) {
+                    //first sanitize the script to prevent malicious code execution
+
+                    json[key] = sweva.SwevaScript.sanitize(json[key].join('\n'),
+                        function (error) {
+                            sweva.ErrorManager.error(
+                                new DefinitionError('Could not sanitize function "' + key + '" when loading "' + context + '": ' + error,
+                                    context, self.convertJsonToCode(json)));
+                        });
+                }
+            }*/
 
             if (typeof json[key] === 'object') {
                 json[key] = this.convertToObject(json[key], context);
@@ -101,12 +128,36 @@ ComposableLoader.prototype.convertToObject = function (json, context) {
 
     return result;
 }
+//TODO: replace default modules
 ComposableLoader.prototype.getDefaultModule = function () {
-    return "{\n    type: \'module\',\n    name: \'module1\',\n    description: \'A simple module template.\',\n    dataInNames: ['in'],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: ['input'],\n    inputSchema: {},\n    request: function (data, input, libs) {\n        return libs.axios.get(\'http:\/\/localhost:8080\/example\/calc\/add\/\');\n    },\n    response: function (response, input, libs) {\n        return { result:response.data }\n    }    \n}";
+    return "{\n" +
+        "      \"type\": \"module\",\n" +
+        "      \"name\": \"Module\",\n" +
+        "      \"description\": \"New Module template\",\n" +
+        "      \"dataInNames\": [\n" +
+        "        \"num\"\n" +
+        "      ],\n" +
+        "      \"dataInSchema\": {},\n" +
+        "      \"dataOutNames\": [\n" +
+        "        \"out\"\n" +
+        "      ],\n" +
+        "      \"dataOutSchema\": {},\n" +
+        "      \"inputNames\": [],\n" +
+        "      \"inputSchema\": {},\n" +
+        "      \"source\": [\n" +
+        "      \"export var a:i32 = 42;\",\n" +
+        "      \"export function run(num: i32): i32 {\",\n" +
+        "      \"if (a > num){\",\n" +
+        "      \"return b}\",\n" +
+        "      \"return num\",\n" +
+        "      \"}\"\n" +
+        "      ]\n" +
+        "}";
 }
 ComposableLoader.prototype.getDefaultComposition = function () {
     return "{\n    type: \'composition\',\n    name: \'composition1\',\n    dataInNames: [],\n    dataInSchema: {},\n    dataOutNames:[\'result\'],\n    dataOutSchema: {},\n    inputNames: [],\n    inputSchema: {},\n    mapDataIn: function (data, composableName, composables, libs) {\n        if (data.hasOwnProperty(composableName)) {\n            return libs.get(data, composableName);\n        }\n        return null;\n    },\n    mapDataOut: function (output, libs) {\n        return output;\n    },\n    mapInput: function (input, moduleName, modules, libs) {\n        if (input.hasOwnProperty(moduleName)) {\n            return libs.get(input, moduleName);\n        }\n        return null;\n    }\n}";
 }
+
 ComposableLoader.prototype.convertCodeToJson = function (string) {
     
     var result = ''

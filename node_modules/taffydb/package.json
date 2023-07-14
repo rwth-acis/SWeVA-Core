@@ -1,0 +1,11 @@
+{
+  "name": "taffydb",
+  "version": "2.6.2",
+  "description": "An open-source library that brings database features into your JavaScript applications.",
+  "main": "taffy.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/hegemonic/taffydb.git"
+  },
+  "license": "BSD"
+}

@@ -1,7 +1,5 @@
-node_modules
-dist
-bower_components
 .tmp
 app/examplesJSON/*
-
-docs
+/node_modules
+.idea/
+app/core/sandbox/*
