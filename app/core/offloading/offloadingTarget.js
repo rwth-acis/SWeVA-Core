@@ -1,13 +1,10 @@
-'use strict';
 
-
-// input format orl = [cpu % , mem % , battery % , isCharging (binary)]
+// orList = [cpu%, mem%, battery%, isCharging (binary)]
 
 function decisionValueOfPOT(offloadingResourcesList){
-    let advantageCPU = 1-offloadingResourcesList[0]; //idl NodeJS cpu usage in %
-    let advantageMem = offloadingResourcesList[1]; // free memory in %
+    let advantageCPU = 100-offloadingResourcesList[0]; //Node.js env. only
 
-    // Advantage is more given to battery than CPU or mem, this could be user input
+    let advantageMem = offloadingResourcesList[1]; // free memory in %
 
     //battery is charging= MAX advantage !
     let advantageBattery = 0;
@@ -15,6 +12,7 @@ function decisionValueOfPOT(offloadingResourcesList){
     if (!offloadingResourcesList[3]){
         advantageBattery = 100-offloadingResourcesList[2];
     }
+    //return advantageCPU + advantageMem - advantageBattery;
     return advantageCPU + advantageMem - advantageBattery;
 }
 
@@ -34,17 +32,16 @@ function offloadingTarget (iDandORpairs){
             bestPOTId=key;
         }
     }
-    console.log('best POT is: ',bestPOTId);
     return bestPOTId;
 }
+module.exports = offloadingTarget
 
-//for testing purposes
+/*
+//for testing purposes (Node.js env.)
 let pairs = {
-    'id1' : [10,20,60,false],
-    'id2' : [50,30,100,false],
-    'id3' : [99,40,10,true],
-    'id4' : [ 0.00, 73.20, 80, false ]
+    'id1' : [100,15,40,false],
+    'id2' : [100,70,5,false],
+    'id3' : [100,50,30,true]
 }
 offloadingTarget(pairs);
-
-module.exports = offloadingTarget
+*/

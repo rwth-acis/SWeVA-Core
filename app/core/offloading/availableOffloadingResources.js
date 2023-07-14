@@ -1,10 +1,14 @@
+//USER input orList:
 
+// for Web environment:
+// orList = [mem%, battery%, isCharging (binary)]
 
-//USER input orList (offloading Resources Limits) = [cpu%, mem%, battery%, isCharging (binary)]
+//for Node.JS environment:
+// orList = [cpu%, mem%, battery%, isCharging (binary)]
 
 async function availableOffloadingResources(orList) {
-    if (orList[0] === 0 || orList[1] === 0 || orList[2] === 0) {
-        return NaN;
+    if (orList[0] === 0 || orList[1] === 0) {
+        return [0,0,0,false];
     }
 
     let cpuLoad = 0;
@@ -20,7 +24,7 @@ async function availableOffloadingResources(orList) {
         let battery = await navigator.getBattery();
         batteryPercent = battery.level * 100;
         batteryIsCharging = battery.charging;
-        console.log('cpu = ',cpuLoad, 'memUsage = ',memUsage,'battery = ',batteryPercent, 'isCharging = ',batteryIsCharging);
+        console.log('memUsage = ',memUsage,'battery = ',batteryPercent, 'isCharging = ',batteryIsCharging);
 
     }else{
         //NodeJS environment
@@ -36,27 +40,36 @@ async function availableOffloadingResources(orList) {
             cpuLoad = cpu.avgLoad;
             batteryPercent = battery.percent;
             batteryIsCharging = battery.acConnected;
-            console.log('cpu = ',cpuLoad, 'memUsage = ',memUsage,'battery = ',batteryPercent, 'isCharging = ',batteryIsCharging);
+            //current cpu load higher than user limit (only for Node.js environment)
+            if (cpuLoad > orList[0]){
+                return [0,0,0,false]
+            }
+            //console.log('cpu = ',cpuLoad, 'memUsage = ',memUsage,'battery = ',batteryPercent, 'isCharging = ',batteryIsCharging);
         }).catch((err) => {
             console.log('Error occurred extracting metrics in the NodeJS environment. ERROR = ' + err);
         });
     }
 
-    if ( cpuLoad < orList[0] && //current cpu load is less than user input
-        memUsage < orList[1] && // current free memory is bigger than user input
-        orList[2] < batteryPercent && // current battery is bigger than user input
-        batteryIsCharging === orList[3]
+    if (
+        memUsage > orList[0] || // mem usage is higher than limit
+        batteryPercent < orList[1] || // battery is lower than minimum set by user
+        batteryIsCharging !== orList[2]
     )
-    {  //Output metrics in percent %
+    {
+        console.log('offloadingOutput$ Peer not chosen for the offloaded task.')
+        return [0,0,0,false]
+    }
+    else{
+    //Output metrics in percent %
         listOfMetrics.push(cpuLoad,(100-memUsage),batteryPercent,batteryIsCharging);
         return listOfMetrics;
-    }else{
-        return NaN
+
     }
 
 }
 module.exports = availableOffloadingResources
 
+/*
 // TEST function for Node.js environment
 setInterval(() =>{
 const startTime = process.hrtime();
@@ -66,5 +79,5 @@ availableOffloadingResources([0,10,10,true]).then((result) => {
     console.log('Elapsed time: '+(endTime[0] * 1000 + endTime[1] / 1000000).toFixed(2)+ ' ms');
 
 });},3000);
-
+*/
 

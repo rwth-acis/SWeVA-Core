@@ -8,6 +8,7 @@ Web and NodeJS environments !
 
 async function offloadingDecision(odList) {
     if (odList[0] === 0 || odList[1] === 0 || odList[2] === 0) {
+        console.log('offloadingOutput$ Offloading Triggered while monitoring the execution!');
         return true;
     }
     let cpuLoad = 0;
@@ -20,7 +21,7 @@ async function offloadingDecision(odList) {
         memUsage = (performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit) * 100;
         let battery = await navigator.getBattery();
         batteryPercent = battery.level * 100;
-        console.log('cpu = ',cpuLoad, 'mem = ',memUsage,'battery = ',batteryPercent);
+        //console.log('Measured mem = ',memUsage,'battery = ',batteryPercent);
 
     } else {
 
@@ -42,13 +43,13 @@ async function offloadingDecision(odList) {
         });
     }
             if (cpuLoad > odList[0]) {
-                console.log('Monitoring = CPU limit exceeded');
+                console.log('offloadingOutput$ Monitoring = CPU limit exceeded');
                 offloading = true;
             } else if (memUsage > odList[1]) {
-                console.log('Monitoring = Memory limit exceeded');
+                console.log('offloadingOutput$ Monitoring = Memory limit exceeded');
                 offloading = true;
             } else if (batteryPercent < odList[2]) {
-                console.log('Monitoring = Battery limit exceeded');
+                console.log('offloadingOutput$ Monitoring = Battery limit exceeded');
                 offloading = true;
             }
 

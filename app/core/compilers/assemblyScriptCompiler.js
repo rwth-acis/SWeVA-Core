@@ -136,8 +136,9 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
     let doneCompiling = false;
     let offloading = false;
     let intervalID;
-    let odList =[1,1,70]; //todo: user input
-    let startCPU =performance.now();
+    let odList =sweva.ExecutionManager.getODList(); //todo: user input
+    console.log("odList in ASC compiler = ",odList);
+
     let endCPU = 0;
     let cpuMonitor=0;
     // initial mem / battery check
@@ -149,6 +150,7 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
         //abort running compilation
         return ('offloading');
     }
+    let startCPU =performance.now();
     return await Promise.race([
         //monitoring the compilation process
         new Promise( async (resolve) => {
@@ -157,9 +159,9 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
             intervalID = setInterval(async () => {
                 endCPU = performance.now();
                 cpuMonitor = ((endCPU - startCPU)/5000)*100;
-                console.log('CPU TIME= ', cpuMonitor);
+                //console.log('CPU TIME= ', cpuMonitor);
                 if (cpuMonitor > odList[0]) {
-                    console.log("Monitoring = CPU limit exceeded");
+                    console.log("offloadingOutput$ Monitoring = CPU limit exceeded");
                     resolve('offloading');
                 }
                 offloading = await offloadingDecision(odList);
@@ -170,7 +172,7 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
                     //abort running compilation
                     resolve('offloading');
                 }
-            }, 1);
+            }, 300);
         }),
 
         // compiling the module
@@ -181,8 +183,6 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
             this.worker.postMessage({type: "compile", source: self.prepareSourceCode(module.source)});
 
         })
-
-
 
     ]).
     then((wr) => {
@@ -197,20 +197,18 @@ AssemblyScriptCompiler.prototype.compile = async function (module) {
         this.resolveCompile = null;
 
         if (workerResult.type === "compileResult") {
-            console.log('Offloading not needed. Proceed as normal');
+            console.log('offloadingOutput$ Offloading not needed. Proceed as normal');
             return workerResult;
         } else if (workerResult === 'offloading') {
             //todo: offloading callback
             this.initWorker();
-            console.log("Offloading necessary. Callback triggered");
+            console.log("offloadingOutput$ Offloading necessary. Callback triggered");
             return 'offloading'; //todo: is String a good DT for return ?
         } else
             throw new CompileError(workerResult.message, module.context);  // Compiler Error handling
 
     });
-
 }
-
 
 AssemblyScriptCompiler.prototype.prepareSourceCode = function(source) {
     let getters = this.generateGlobalGetters(source);

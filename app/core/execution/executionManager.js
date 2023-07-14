@@ -5,61 +5,43 @@ var Module = require('../../core/composables/module.js');
 var Composition = require('../../core/composables/composition.js');
 
 //MA
-//+++++++++ Global Variables +++++++++
-//for P2P networking
-// TOdO: do we require this ?
-const EventEmitter = require('events');
-const emitter = new EventEmitter();
-const potentialOffloadingTarget = require("../network/potentialOffloadingTarget.js");
+let potentialOffloadingTarget = require("../network/potentialOffloadingTarget.js");
+let dataProcessingDevice = require("../network/dataProcessingDevice.js");
 
 // **** P2P network ****
-
-
-/**
- let peer = new Peer({ //needs bib import in frontend !
-    host:"localhost",
-    port:9000,
-    path:"/discovery"
+let peer = new Peer('',{
+    host:"milki-psy.dbis.rwth-aachen.de",
+    port:443,
+    path:"/discoveryNetwork"
 });
-
- //Event-based script
- //+++++++++ DEVICE is POT +++++++++
- peer.on('connection', (connection) => {
-        connection.on('data', (data) => {
-            if (data === 'peer){
-             emitter.emit('isPeer');
-            console.log('Received ROLE: ' + data+' from device: ' + connection.peer);
-            }
-                   });
-});
-
- emitter.on('isPeer',potentialOffloadingTarget());
- **/
+console.log('offloadingOutput$ Connection to the SWeVA P2P network successful!')
+//Event-based script
+//+++++++++ DEVICE is POT +++++++++
+peer.on('connection', (connection) => {
+    connection.on('data', (data) => {
+        if (data === 'peer'){
+            let msg = 'offloadingOutput$ Offloading request from device = ' + connection.peer;
+            console.log(msg);
+            potentialOffloadingTarget();
+        }
+    }); });
 //+++++++++ DEVICE is DPD +++++++++
-function listOfPeers() { // used to broadcast roles and for frontend !
-    let list = [];
-    peer.listAllPeers((peerIds) => {
-        peerIds
-            .filter((peerId) => peerId !== peer.id) // Filter out device ID
-            .forEach((peerId) => {
-                list.push(peerId);
-            });
-    });
-    return list;
-}
 
-function broadcastToDiscoveryNetwork() {
+function broadcastToDiscoveryNetwork(intermediatePipelineAndResults) {
+    console.log('offloadingOutput$ broadcasting to discovery network....');
+    dataProcessingDevice(intermediatePipelineAndResults);
     peer.listAllPeers((peerIds) => {
         peerIds
             .filter((peerId) => peerId !== peer.id) // Filter out device ID
             .forEach((peerId) => {
                 const conn = peer.connect(peerId);
                 conn.on('open', () => {
-                    console.log('Discovered Peer: ' + peerId);
+                    //console.log('offloadingOutput$ Discovered Peer = ' + peerId);
                     conn.send('peer');
                 });
                 conn.on('error', (err) => {
                     console.error('Error discovering Peer : ' + peerId);
+                    console.error(err);
                 })
             });
     });
@@ -67,6 +49,53 @@ function broadcastToDiscoveryNetwork() {
 
 // **** END P2P network ****
 
+// ************* Getters and Setters ****************
+
+//default values
+let odList = [50,50,50];
+let orList = [50,50,false];
+let intermediatePipeline = {};
+let intermediatePipelineResults ={};
+ExecutionManager.setODList = function (odListInput) {
+    odList=odListInput;
+}
+ExecutionManager.getODList = function () {
+    return odList;
+}
+
+ExecutionManager.setORList = function (orListInput) {
+    orList=orListInput;
+}
+ExecutionManager.getORList = function () {
+    return orList;
+}
+
+ExecutionManager.setInitialIntermediatePipeline = function (intermediatePipelineInput) {
+    //prepare the intermediate pipeline for compatibility reasons
+    for (let key in intermediatePipelineInput.composables) {
+        if (intermediatePipelineInput.composables.hasOwnProperty(key)) {
+            delete intermediatePipelineInput.composables[key].manager;
+        }
+    }
+    intermediatePipeline = intermediatePipelineInput;
+
+    console.log('Initializing intermediate pipeline =',intermediatePipeline);
+
+}
+
+ExecutionManager.getListOfPeers = function listOfPeers() {
+    return new Promise((resolve) => {
+        peer.listAllPeers((peerIds) => {
+            const list = peerIds
+                .filter((peerId) => peerId !== peer.id)
+                .map((peerId) => peerId.toString());
+
+            resolve(list);
+        });
+    });
+};
+
+//****** end Web GETTERS and SETTERS ***********
 
 /**
  * An ExecutionManager is responsible for managing the execution process of compositions and modules.
@@ -128,6 +157,7 @@ ExecutionManager.prototype.sendDataToVisualization = function (result) {
     }
 }
 
+
 /**
  * Registers a callback function that gets called whenever any asynchronous node re-executes parts of the composition.
  *
@@ -170,17 +200,9 @@ ExecutionManager.prototype.onModuleUpdate = function (module) {
  */
 //Global variable names
 
-let intermediatePipeline;
-let intermediatePipelineResults;
+
+
 ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
-    intermediatePipeline = executionArray;
-    /*console.log('///// Exec. manager setup inputs //////');
-    console.log('executionArray');
-    console.log(executionArray);
-    console.log('isPureObject');
-    console.log(isPureObject);
-    console.log('intermed. pip');
-    console.log(intermediatePipeline);*/
 
     //internal recursive function to count how many modules are currently used
     function countModules(composable) {
@@ -266,35 +288,55 @@ ExecutionManager.prototype.setup = function (executionArray, isPureObject) {
                     self.name, error));
         });
 }
+
 /**
  * Calculates the current progress state and calls the optionally registered progressCallback.
  * It counts the percentage of the modules that have finished execution.
- *
- * (IF) TODO: update it to modules done locally and ofloaded modules
  *
  * @param {string} alias - The alias of the module, under which it is known to the parent composition.
  * @param {string} name - The name of the module.
  * @param {string} context - The context under which the module is executed (its parents).
  */
 ExecutionManager.prototype.progressUpdate = function (alias, name, context,result) {
+    console.log('offloadingOutput$ Finished executing ',alias);
     if (result==='offloading')
         {
-            console.log('OFFLOADING flag catched in Exec manager !')
-            console.log('alias:')
-            console.log(alias); // node 1
-            console.log('name:')
-            console.log(name); //module 1
-            console.log(intermediatePipelineResults);
-            console.log(intermediatePipeline);
-            console.log('SEND THIS Pipeline to ')
-        }
-    else {
+            console.log('OFFLOADING flag catched in Exec manager !');
+
+            //prepare pipeline to be compatible for offloading
+            for (let key in intermediatePipeline.composables) {
+                if (intermediatePipeline.composables.hasOwnProperty(key)) {
+                    delete intermediatePipeline.composables[key].manager;
+                }
+                const composablesNode = intermediatePipeline.composables[key];
+                for (let prop in composablesNode) {
+                    if (composablesNode[prop] === null) {
+                        delete composablesNode[prop];
+                    }
+                }
+            }
+
+            intermediatePipeline =JSON.stringify(intermediatePipeline);
+
+            intermediatePipelineResults= JSON.stringify(intermediatePipelineResults);
+            let mergedPip ={intermediatePipeline:intermediatePipeline,intermediatePipelineResults:intermediatePipelineResults};
+
+            //console.log('offloading the merged Pipeline...');
+            //console.log(mergedPip);
+
+            broadcastToDiscoveryNetwork(mergedPip); //Offload merged Pipeline to best POT
+
+
+    }
+
+    //detects an offloaded pipeline :)
+    if (Object.keys(intermediatePipeline).length !== 0)
+    {
         //consider result as linked nodes input
         let nodeLinks = intermediatePipeline.links;
         let moduleResult = result.out;
 
         if (nodeLinks.hasOwnProperty(alias)){
-            console.log('YESSSSSSSSSSSSSSSSSSSSSSSSS')
             let linksArray =Object.entries(nodeLinks[alias].out)[0];
             console.log(linksArray);
 
@@ -302,34 +344,16 @@ ExecutionManager.prototype.progressUpdate = function (alias, name, context,resul
                 "num":moduleResult
             };
             console.log(intermediatePipelineResults);
+            delete intermediatePipeline.composables[alias];
         }else {
 
             //consider result as node output
-            console.log('FUCKKKKKKKKKKKKKKKKKK')
             intermediatePipelineResults[alias]={
                 "out":moduleResult
             };
+            delete intermediatePipeline.composables[alias];
         }
-        /*console.log('/////////////');
-        let formattedAlias = '"' + alias + '"';
-        console.log( alias); // node 1
-        console.log(intermediatePipeline.links); // node
-        console.log('/////////////');
-        ///.alias.out;
-        //console.log(nodeOutputLink);
-        let formattedObj = {
-            "Node2": {
-                [obj["Node2"]]:
-            }
-        }*/
-        //delete intermediatePipeline.composables.alias;
-        console.log('progress bar result =');
-        console.log(result.out);
-        console.log('intermediate pipeline =');
-        console.log(intermediatePipeline);
-        console.log('intermediate pipeline results =');
-        console.log(intermediatePipelineResults);
-        //todo:update intermediate pipeline with result
+
 
     if (this.progressCallback !== null) {
         this.modulesDone++;
@@ -338,7 +362,7 @@ ExecutionManager.prototype.progressUpdate = function (alias, name, context,resul
 
         //make a value 0-100 and cut off decimal places
         this.progressCallback((progress * 100).toFixed(0));
-        //TODO send this to frontend
+
     }}
 }
 
@@ -360,9 +384,8 @@ ExecutionManager.prototype.execute = function (data, input) {
      */
     var executions = [];
     var self = this;
-    intermediatePipelineResults=data;
-    //for aborting the execution of JS promise
 
+    /*
     console.log("///////////// Exec Manager inputs //////////////");
     console.log("data");
     console.log(data);
@@ -373,7 +396,8 @@ ExecutionManager.prototype.execute = function (data, input) {
     console.log('intermediate Pipeline');
     console.log(intermediatePipeline);
     console.log("///////////////////////////");
-
+    */
+    console.log('begin the execution');
     return new Promise(function (resolve, reject) {
         //closure function
         //composables is the pipeline
